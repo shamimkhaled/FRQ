@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Capacity | {{ fr.customer_name }}{% endblock %}
+{% block page_title %}Bandwidth Confirmation — {{ fr.customer_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <a href="{% if wo %}{% url 'workorders:detail' wo.pk %}{% else %}{% url 'feasibility:detail' fr.pk %}{% endif %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Back</a>
+  <a href="{% url 'capacity:add' fr.pk %}" class="btn btn-primary btn-sm"><i class="fas fa-plus me-1"></i>Add Confirmation</a>
+  <a href="{% url 'capacity:pricing_list' fr.pk %}" class="btn btn-success btn-sm"><i class="fas fa-calculator me-1"></i>Service Pricing</a>
+  <form method="post" action="{% url 'capacity:send_bw_emails' fr.pk %}" class="d-inline" onsubmit="return confirm('Send bandwidth confirmation emails to NOC, Accounts, and Management?')">
+    {% csrf_token %}
+    <input type="hidden" name="redirect_to" value="{% if wo %}workorder{% else %}capacity{% endif %}">
+    <button type="submit" class="btn btn-warning btn-sm"><i class="fas fa-envelope me-1"></i>Send Dept. Notifications</button>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-dark">
+        <tr><th>Provider</th><th>Requested</th><th>Available</th><th>Status</th><th>Ref #</th><th>Date</th><th>Remarks</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for c in confirmations %}
+        <tr>
+          <td><span class="badge bg-dark">{{ c.get_provider_display }}</span></td>
+          <td>{{ c.requested_capacity }} Mbps</td>
+          <td>{{ c.available_capacity|default:"—" }} Mbps</td>
+          <td>
+            <span class="badge {% if c.status == 'confirmed' %}bg-success{% elif c.status == 'rejected' %}bg-danger{% elif c.status == 'partially_confirmed' %}bg-warning{% else %}bg-secondary{% endif %}">
+              {{ c.get_status_display }}
+            </span>
+          </td>
+          <td>{{ c.provider_reference|default:"—" }}</td>
+          <td class="small text-muted">{{ c.confirmation_date|default:"—" }}</td>
+          <td class="small">{{ c.remarks|truncatechars:40|default:"—" }}</td>
+          <td>
+            <a href="{% url 'capacity:edit' fr.pk c.pk %}" class="btn btn-sm btn-outline-warning"><i class="fas fa-edit"></i></a>
+            <form method="post" action="{% url 'capacity:delete' fr.pk c.pk %}" class="d-inline" onsubmit="return confirm('Remove?')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-4">No capacity confirmations yet. Add confirmation for each NTTN provider.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

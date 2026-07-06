@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Add Service Pricing | Kloud{% endblock %}
+{% block page_title %}Add Service Pricing{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header fw-semibold"><i class="fas fa-calculator me-2"></i>Service Pricing — {{ fr.customer_name }}</div>
+      <div class="card-body">
+        <form method="post" id="pricingForm">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Service Type</label>
+              <select name="service_type" id="serviceType" class="form-select" onchange="fillUnitPrice()">
+                <option value="IPT">IPT - Internet Protocol Transit</option>
+                <option value="GGC">GGC - Google Global Cache</option>
+                <option value="FNA">FNA - Facebook Network Appliance</option>
+                <option value="BDIX">BDIX - Bangladesh Internet Exchange</option>
+                <option value="CDN">CDN - Content Delivery Network</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Capacity (Mbps)</label>
+              <input type="number" name="capacity_mbps" id="capacityMbps" class="form-control" value="{% if edit_mode %}{{ pricing.capacity_mbps }}{% else %}{{ fr.requested_capacity }}{% endif %}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Quantity</label>
+              <input type="number" name="quantity" class="form-control" value="{% if edit_mode %}{{ pricing.quantity }}{% else %}1{% endif %}" min="1">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Unit Price</label>
+              <input type="number" step="any" name="unit_price" id="unitPrice" class="form-control" placeholder="Auto-filled">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">VAT (%)</label>
+              <input type="number" step="any" name="vat_percent" class="form-control" value="15">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Installation Charge (BDT)</label>
+              <input type="number" step="any" name="installation_charge" class="form-control" value="0">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Fiber Deployment (BDT)</label>
+              <input type="number" step="any" name="fiber_deployment_charge" class="form-control" value="{{ fr.estimated_fiber_cost|default:0 }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">One-Time Charge (BDT)</label>
+              <input type="number" step="any" name="one_time_charge" class="form-control" value="0">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Discount (BDT)</label>
+              <input type="number" step="any" name="discount" class="form-control" value="0">
+            </div>
+          </div>
+          <div class="d-flex gap-2 justify-content-end mt-3">
+            <a href="{% url 'capacity:pricing_list' fr.pk %}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>Save Pricing</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const unitPrices = { IPT: 100, GGC: 100, FNA: 10, BDIX: 50, CDN: 50 };
+function fillUnitPrice() {
+  const stype = document.getElementById('serviceType').value;
+  document.getElementById('unitPrice').value = unitPrices[stype] || '';
+}
+fillUnitPrice();
+</script>
+{% endblock %}

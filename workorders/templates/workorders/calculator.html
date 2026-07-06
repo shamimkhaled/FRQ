@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% block title %}Bandwidth Calculator | Kloud{% endblock %}
+{% block page_title %}Bandwidth Calculator{% endblock %}
+{% block nav_calculator %}active{% endblock %}
+
+{% block content %}
+<ul class="nav nav-tabs mb-3" id="calcTabs">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#pricingTab">Bandwidth Pricing</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#macTab">MAC Calculator</button></li>
+</ul>
+
+<div class="tab-content">
+  <!-- Mode 1: Bandwidth Pricing -->
+  <div class="tab-pane fade show active" id="pricingTab">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Monthly Service Pricing</span>
+        <button type="button" class="btn btn-sm btn-success" id="addPricingRow"><i class="fas fa-plus"></i> Add Service</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead class="table-dark">
+            <tr><th>Service</th><th>Mbps</th><th>Price/Mbps</th><th class="text-end">Total</th><th></th></tr>
+          </thead>
+          <tbody id="pricingBody"></tbody>
+        </table>
+      </div>
+      <div class="card-body">
+        <div class="row text-center">
+          <div class="col-md-4"><div class="text-muted small">Total Mbps</div><div class="fs-4 fw-bold" id="pricingMbps">0</div></div>
+          <div class="col-md-4"><div class="text-muted small">Service Total</div><div class="fs-4 fw-bold" id="pricingSub">BDT 0</div></div>
+          <div class="col-md-4"><div class="text-muted small">Grand Total</div><div class="fs-3 fw-bold text-success" id="pricingGrand">BDT 0</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mode 2: MAC Calculator -->
+  <div class="tab-pane fade" id="macTab">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Monthly Access Cost (Revenue Split)</span>
+        <button type="button" class="btn btn-sm btn-success" id="addMacRow"><i class="fas fa-plus"></i> Add Service</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead class="table-dark">
+            <tr><th>Service</th><th>Mbps</th><th>Price/Mbps</th><th class="text-end">Total</th><th></th></tr>
+          </thead>
+          <tbody id="macBody"></tbody>
+        </table>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 align-items-end mb-3">
+          <div class="col-md-4">
+            <label class="form-label">Client Share %</label>
+            <input type="number" id="clientSharePct" class="form-control" value="{{ default_mac_share }}" min="0" max="100" step="0.01">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Kloud Share %</label>
+            <input type="number" id="kloudSharePct" class="form-control" value="{{ default_mac_share }}" readonly>
+          </div>
+        </div>
+        <div class="row text-center">
+          <div class="col-md-4"><div class="text-muted small">Monthly Revenue (MAC)</div><div class="fs-4 fw-bold" id="macRevenue">BDT 0</div></div>
+          <div class="col-md-4"><div class="text-muted small">Client Share</div><div class="fs-4 fw-bold text-primary" id="macClient">BDT 0</div></div>
+          <div class="col-md-4"><div class="text-muted small">Kloud Share</div><div class="fs-4 fw-bold text-success" id="macKloud">BDT 0</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SERVICE_TYPES = {{ service_types|safe }};
+const DEFAULT_SERVICES = [
+  {name:'IPT', mbps:100, ppm:200},
+  {name:'GGC', mbps:50, ppm:100},
+  {name:'CDN', mbps:20, ppm:80},
+];
+
+function serviceOptions(selected) {
+  return SERVICE_TYPES.map(([v]) => `<option value="${v}" ${v===selected?'selected':''}>${v}</option>`).join('');
+}
+
+function calcPricing() {
+  let sub = 0, mbps = 0;
+  document.querySelectorAll('#pricingBody tr').forEach(row => {
+    const m = parseFloat(row.querySelector('.c-mbps').value) || 0;
+    const p = parseFloat(row.querySelector('.c-ppm').value) || 0;
+    const t = m * p;
+    sub += t; mbps += m;
+    row.querySelector('.c-total').textContent = t.toLocaleString();
+  });
+  document.getElementById('pricingMbps').textContent = mbps + ' Mbps';
+  document.getElementById('pricingSub').textContent = 'BDT ' + sub.toLocaleString();
+  document.getElementById('pricingGrand').textContent = 'BDT ' + sub.toLocaleString();
+}
+
+function calcMac() {
+  let rev = 0;
+  document.querySelectorAll('#macBody tr').forEach(row => {
+    const m = parseFloat(row.querySelector('.c-mbps').value) || 0;
+    const p = parseFloat(row.querySelector('.c-ppm').value) || 0;
+    const t = m * p;
+    rev += t;
+    row.querySelector('.c-total').textContent = t.toLocaleString();
+  });
+  const clientPct = parseFloat(document.getElementById('clientSharePct').value) || 50;
+  document.getElementById('kloudSharePct').value = (100 - clientPct).toFixed(2);
+  const client = rev * clientPct / 100;
+  const kloud = rev - client;
+  document.getElementById('macRevenue').textContent = 'BDT ' + rev.toLocaleString();
+  document.getElementById('macClient').textContent = 'BDT ' + client.toLocaleString();
+  document.getElementById('macKloud').textContent = 'BDT ' + kloud.toLocaleString();
+}
+
+function addCalcRow(tbodyId, data, onCalc) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><select class="form-select form-select-sm c-svc">${serviceOptions(data?.name)}</select></td>
+    <td><input class="form-control form-control-sm c-mbps" type="number" min="0" value="${data?.mbps||''}"></td>
+    <td><input class="form-control form-control-sm c-ppm" type="number" min="0" step="any" value="${data?.ppm||''}"></td>
+    <td class="text-end fw-bold c-total">0</td>
+    <td><button type="button" class="btn btn-sm btn-outline-danger rm"><i class="fas fa-trash"></i></button></td>`;
+  document.getElementById(tbodyId).appendChild(tr);
+  tr.querySelectorAll('input').forEach(i => i.addEventListener('input', onCalc));
+  tr.querySelector('.rm').addEventListener('click', () => { tr.remove(); onCalc(); });
+  onCalc();
+}
+
+document.getElementById('addPricingRow').addEventListener('click', () => addCalcRow('pricingBody', null, calcPricing));
+document.getElementById('addMacRow').addEventListener('click', () => addCalcRow('macBody', null, calcMac));
+document.getElementById('clientSharePct').addEventListener('input', calcMac);
+
+DEFAULT_SERVICES.forEach(d => addCalcRow('pricingBody', d, calcPricing));
+DEFAULT_SERVICES.forEach(d => addCalcRow('macBody', d, calcMac));
+</script>
+{% endblock %}

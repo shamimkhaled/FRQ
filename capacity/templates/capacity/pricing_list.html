@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Pricing | {{ fr.customer_name }}{% endblock %}
+{% block page_title %}Service Pricing — {{ fr.customer_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex gap-2 mb-3">
+  <a href="{% if wo %}{% url 'workorders:detail' wo.pk %}{% else %}{% url 'capacity:list' fr.pk %}{% endif %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Back</a>
+  <a href="{% url 'capacity:add_pricing' fr.pk %}" class="btn btn-success btn-sm"><i class="fas fa-plus me-1"></i>Add Service</a>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-dark">
+        <tr><th>Service</th><th>Capacity</th><th>Qty</th><th>Unit Price</th><th>Monthly</th><th>VAT%</th><th>Discount</th><th>Total Monthly</th><th>Installation</th><th>Total Payable</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for p in pricings %}
+        <tr>
+          <td><span class="badge bg-primary">{{ p.service_type }}</span></td>
+          <td>{{ p.capacity_mbps }} Mbps</td>
+          <td>{{ p.quantity }}</td>
+          <td>{{ p.unit_price }}</td>
+          <td>{{ p.monthly_price }}</td>
+          <td>{{ p.vat_percent }}%</td>
+          <td>{{ p.discount }}</td>
+          <td><strong>BDT {{ p.total_monthly_charge|floatformat:2 }}</strong></td>
+          <td>BDT {{ p.installation_charge|floatformat:2 }}</td>
+          <td class="text-success fw-bold">BDT {{ p.total_payable|floatformat:2 }}</td>
+          <td>
+            <a href="{% url 'capacity:edit_pricing' fr.pk p.pk %}" class="btn btn-sm btn-outline-warning"><i class="fas fa-edit"></i></a>
+            <form method="post" action="{% url 'capacity:delete_pricing' fr.pk p.pk %}" class="d-inline" onsubmit="return confirm('Remove service?')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="11" class="text-center text-muted py-4">No services added yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if pricing_summary %}
+<div class="card bg-light">
+  <div class="card-body">
+    <div class="row text-center">
+      <div class="col-md-3">
+        <div class="text-muted small">Subtotal Monthly</div>
+        <div class="fs-5 fw-bold">BDT {{ pricing_summary.subtotal_monthly|floatformat:2 }}</div>
+      </div>
+      <div class="col-md-3">
+        <div class="text-muted small">Total Monthly (incl. VAT)</div>
+        <div class="fs-5 fw-bold text-primary">BDT {{ pricing_summary.total_monthly|floatformat:2 }}</div>
+      </div>
+      <div class="col-md-3">
+        <div class="text-muted small">One-Time Charges</div>
+        <div class="fs-5 fw-bold text-warning">BDT {{ pricing_summary.total_one_time|floatformat:2 }}</div>
+      </div>
+      <div class="col-md-3">
+        <div class="text-muted small">Grand Total</div>
+        <div class="fs-4 fw-bold text-success">BDT {{ pricing_summary.grand_total|floatformat:2 }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

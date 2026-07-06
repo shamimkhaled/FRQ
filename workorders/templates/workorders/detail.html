@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% block title %}{{ fr.work_order_label }} | Kloud{% endblock %}
+{% block page_title %}{{ fr.work_order_label }} — {{ fr.customer_name }}{% endblock %}
+{% block nav_workorders %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex gap-2 mb-3 flex-wrap no-print">
+  <a href="{% url 'workorders:list' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left"></i> Work Orders</a>
+  <a href="{% url 'feasibility:detail' fr.pk %}" class="btn btn-outline-info btn-sm">Feasibility</a>
+  <a href="{% url 'workorders:edit' fr.pk %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Edit</a>
+  <a href="{% url 'workorders:print' fr.pk %}" class="btn btn-secondary btn-sm" target="_blank"><i class="fas fa-print"></i> Print / PDF</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">Work Order Details</div>
+      <div class="card-body p-0">
+        <table class="table table-bordered mb-0">
+          <tr><th class="bg-light" width="30%">Customer</th><td>{{ fr.customer_name }}</td></tr>
+          <tr><th class="bg-light">Company</th><td>{{ fr.company_name|default:"—" }}</td></tr>
+          <tr><th class="bg-light">Contact / Phone</th><td>{{ fr.proprietor_name|default:"—" }} / {{ fr.phone_number }}</td></tr>
+          <tr><th class="bg-light">Email</th><td>{{ fr.email|default:"—" }}</td></tr>
+          <tr><th class="bg-light">Address</th><td>{{ fr.address }}</td></tr>
+          <tr><th class="bg-light">Coordinates</th><td>{{ fr.latitude }}, {{ fr.longitude }}</td></tr>
+          <tr><th class="bg-light">NID</th><td>{{ fr.nid_number }}</td></tr>
+          <tr><th class="bg-light">NTTN / Capacity</th><td>{{ fr.get_preferred_nttn_display }} — {{ fr.requested_capacity }} Mbps</td></tr>
+          <tr><th class="bg-light">Expected Installation</th><td>{{ fr.expected_installation_date|date:"d M Y"|default:"—" }}</td></tr>
+          <tr><th class="bg-light">Installation Notes</th><td>{{ fr.installation_notes|default:"—" }}</td></tr>
+          {% if fr.cheque_image %}<tr><th class="bg-light">Cheque</th><td><a href="{{ fr.cheque_image.url }}" target="_blank">View document</a></td></tr>{% endif %}
+        </table>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">Services ({{ services|length }})</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-dark"><tr><th>Service</th><th>Mbps</th><th>Unit Price</th><th>Qty</th><th>Monthly</th></tr></thead>
+            <tbody>
+              {% for s in services %}
+              <tr>
+                <td><span class="badge bg-primary">{{ s.service_type }}</span></td>
+                <td>{{ s.capacity_mbps }}</td>
+                <td>BDT {{ s.unit_price|floatformat:2 }}</td>
+                <td>{{ s.quantity }}</td>
+                <td class="fw-semibold">BDT {{ s.total_monthly_charge|floatformat:2 }}</td>
+              </tr>
+              {% empty %}<tr><td colspan="5" class="text-center text-muted py-3">No services configured.</td></tr>{% endfor %}
+            </tbody>
+            {% if summary %}
+            <tfoot class="table-light">
+              <tr><th colspan="3" class="text-end">Total Mbps</th><th colspan="2">{{ summary.total_mbps }} Mbps</th></tr>
+              <tr><th colspan="3" class="text-end">Subtotal</th><th colspan="2">BDT {{ summary.subtotal_monthly|floatformat:2 }}</th></tr>
+              <tr><th colspan="3" class="text-end">VAT</th><th colspan="2">BDT {{ summary.vat_total|floatformat:2 }}</th></tr>
+              <tr><th colspan="3" class="text-end">Discount</th><th colspan="2">BDT {{ summary.discount_total|floatformat:2 }}</th></tr>
+              <tr><th colspan="3" class="text-end">Grand Total</th><th colspan="2" class="text-success fw-bold">BDT {{ summary.grand_total|floatformat:2 }}</th></tr>
+            </tfoot>
+            {% endif %}
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header fw-semibold d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span>Bandwidth Confirmation</span>
+        <a href="{% url 'workorders:bandwidth_add' fr.pk %}" class="btn btn-sm btn-primary">Add / Edit Provider</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table mb-0 align-middle">
+            <thead class="table-dark">
+              <tr>
+                <th>Provider</th><th>Requested</th><th>Approved</th><th>Available</th>
+                <th>Status</th><th>Ref #</th><th>Date</th><th class="no-print"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in confirmations %}
+              <tr>
+                <td class="fw-semibold">{{ c.provider }}</td>
+                <td>{{ c.requested_capacity }} Mbps</td>
+                <td>{{ c.approved_capacity|default:"—" }}{% if c.approved_capacity %} Mbps{% endif %}</td>
+                <td>{{ c.available_capacity|default:"—" }}{% if c.available_capacity %} Mbps{% endif %}</td>
+                <td><span class="badge bg-secondary">{{ c.status|title }}</span></td>
+                <td>{{ c.provider_reference|default:"—" }}</td>
+                <td class="small">{{ c.confirmation_date|default:"—" }}</td>
+                <td class="no-print">
+                  <div class="btn-group btn-group-sm">
+                    <a href="{% url 'workorders:bandwidth_edit' fr.pk c.provider %}" class="btn btn-outline-warning"><i class="fas fa-edit"></i></a>
+                    <form method="post" action="{% url 'workorders:bandwidth_delete' fr.pk c.provider %}" class="d-inline" onsubmit="return confirm('Remove this confirmation?')">
+                      {% csrf_token %}<button class="btn btn-outline-danger"><i class="fas fa-trash"></i></button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% if c.remarks %}<tr><td colspan="8" class="small text-muted ps-4">Remarks: {{ c.remarks }}</td></tr>{% endif %}
+              {% empty %}
+              <tr><td colspan="8" class="text-center text-muted py-3">No bandwidth confirmations yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">Work Order Status</div>
+      <div class="card-body text-center">
+        <span class="badge fs-6 bg-primary rounded-pill px-4 py-2 mb-3">{{ fr.get_onboarding_status_display }}</span>
+        <div class="small text-muted mb-2">Bandwidth: {{ fr.bandwidth_status_label }}</div>
+        <form method="post" action="{% url 'workorders:update_status' fr.pk %}" class="no-print">
+          {% csrf_token %}
+          <select name="status" class="form-select form-select-sm mb-2">
+            {% for val, label in onboarding_statuses %}
+            {% if val %}<option value="{{ val }}" {% if fr.onboarding_status == val %}selected{% endif %}>{{ label }}</option>{% endif %}
+            {% endfor %}
+          </select>
+          <button class="btn btn-primary btn-sm w-100">Update Status</button>
+        </form>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">Meta</div>
+      <div class="card-body small">
+        <div class="d-flex justify-content-between mb-1"><span class="text-muted">Created</span><span>{{ fr.created_at|date:"d M Y H:i" }}</span></div>
+        <div class="d-flex justify-content-between mb-1"><span class="text-muted">Onboarded by</span><span>{{ fr.onboarded_by|default:"—" }}</span></div>
+        {% if fr.approved_by %}<div class="d-flex justify-content-between"><span class="text-muted">Approved by</span><span>{{ fr.approved_by }}</span></div>{% endif %}
+      </div>
+    </div>
+    <div class="card no-print">
+      <div class="card-header fw-semibold">Notifications</div>
+      <div class="card-body">
+        <form method="post" action="{% url 'workorders:send_notifications' fr.pk %}">
+          {% csrf_token %}
+          <button class="btn btn-warning btn-sm w-100" {% if not services %}disabled{% endif %}><i class="fas fa-envelope me-1"></i>Send Dept. Emails</button>
+        </form>
+        {% if fr.bw_emails_sent %}<div class="small text-success mt-2"><i class="fas fa-check"></i> Emails sent</div>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

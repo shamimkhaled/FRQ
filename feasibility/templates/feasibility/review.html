@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Review #{{ fr.pk }} | Kloud{% endblock %}
+{% block page_title %}Review Feasibility #{{ fr.pk }}{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-4 mb-3">
+    <div class="card">
+      <div class="card-header fw-semibold bg-light">Request Summary</div>
+      <div class="card-body">
+        <table class="table table-sm table-borderless mb-0">
+          <tr><th class="text-muted small">Customer</th><td>{{ fr.customer_name }}</td></tr>
+          <tr><th class="text-muted small">Phone</th><td>{{ fr.phone_number }}</td></tr>
+          <tr><th class="text-muted small">Capacity</th><td>{{ fr.requested_capacity }} Mbps</td></tr>
+          <tr><th class="text-muted small">Latitude</th><td>{{ fr.latitude }}</td></tr>
+          <tr><th class="text-muted small">Longitude</th><td>{{ fr.longitude }}</td></tr>
+          {% if fr.nearest_pop %}
+          <tr><th class="text-muted small">Nearest POP</th><td>{{ fr.nearest_pop.name }}</td></tr>
+          <tr><th class="text-muted small">Air Distance</th><td>{{ fr.air_distance_km }} km</td></tr>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header fw-semibold"><i class="fas fa-edit me-2"></i>Engineering Review</div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
+              <select name="status" class="form-select">
+                {% for val, label in form.fields.status.choices %}
+                <option value="{{ val }}" {% if form.status.value == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Estimated Delivery (Working Days)</label>
+              <input type="number" name="estimated_delivery_days" class="form-control" value="{{ form.estimated_delivery_days.value|default:'' }}" placeholder="e.g. 5">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Fiber Route Distance (km)</label>
+              <input type="number" step="any" name="fiber_route_distance_km" class="form-control" value="{{ form.fiber_route_distance_km.value|default:'' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Estimated Fiber Cost (BDT)</label>
+              <input type="number" step="any" name="estimated_fiber_cost" class="form-control" value="{{ form.estimated_fiber_cost.value|default:'' }}">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Remarks (for client)</label>
+              <textarea name="remarks" rows="3" class="form-control">{{ form.remarks.value|default:'' }}</textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Engineering Notes (internal)</label>
+              <textarea name="engineering_notes" rows="3" class="form-control">{{ form.engineering_notes.value|default:'' }}</textarea>
+            </div>
+          </div>
+          <div class="d-flex gap-2 justify-content-end mt-3">
+            <a href="{% url 'feasibility:detail' fr.pk %}" class="btn btn-outline-secondary">Cancel</a>
+            {% if fr.can_create_work_order %}
+            <a href="{% url 'workorders:create' fr.pk %}" class="btn btn-success"><i class="fas fa-file-circle-plus me-1"></i>Create Work Order</a>
+            {% endif %}
+            <button type="submit" class="btn btn-warning"><i class="fas fa-save me-1"></i>Save Review</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

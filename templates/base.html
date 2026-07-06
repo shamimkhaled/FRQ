@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Kloud ISP{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body { background: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
+    .sidebar { min-height: 100vh; background: #1a2035; color: #fff; width: 250px; position: fixed; top: 0; left: 0; padding-top: 20px; z-index: 100; }
+    .sidebar .brand { padding: 0 20px 20px; border-bottom: 1px solid #2d3559; }
+    .sidebar .brand h4 { color: #4fc3f7; font-weight: 700; margin: 0; }
+    .sidebar .brand small { color: #90caf9; font-size: 11px; }
+    .sidebar .nav-link { color: #b0bec5; padding: 10px 20px; display: flex; align-items: center; gap: 10px; transition: all .2s; border-left: 3px solid transparent; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: #2d3559; border-left-color: #4fc3f7; }
+    .sidebar .nav-section { color: #607d8b; font-size: 11px; padding: 15px 20px 5px; text-transform: uppercase; letter-spacing: 1px; }
+    .main-content { margin-left: 250px; padding: 20px; }
+    .topbar { background: #fff; padding: 12px 20px; margin: -20px -20px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); display: flex; justify-content: space-between; align-items: center; }
+    .stat-card { border-radius: 12px; padding: 20px; color: #fff; position: relative; overflow: hidden; }
+    .stat-card .icon { font-size: 40px; opacity: .3; position: absolute; right: 15px; top: 15px; }
+    .badge-status-pending { background: #fff3e0; color: #e65100; }
+    .badge-status-under_review { background: #e3f2fd; color: #1565c0; }
+    .badge-status-feasible { background: #e8f5e9; color: #2e7d32; }
+    .badge-status-feasible_additional_cost { background: #fff8e1; color: #f57f17; }
+    .badge-status-not_feasible { background: #fce4ec; color: #c62828; }
+    .badge-status-rejected { background: #efebe9; color: #4e342e; }
+    .card { border: none; border-radius: 12px; box-shadow: 0 1px 6px rgba(0,0,0,.08); }
+    .section-title { font-size: 13px; font-weight: 600; color: #607d8b; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 15px; }
+    @media print { .sidebar, .topbar, .no-print { display: none !important; } .main-content { margin-left: 0 !important; } }
+    @media (max-width: 991.98px) {
+      .sidebar { position: relative; width: 100%; min-height: auto; }
+      .main-content { margin-left: 0; }
+      .stat-card .fs-2, .stat-card .fs-4 { font-size: 1.25rem !important; }
+    }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="brand">
+    <h4><i class="fas fa-cloud"></i> Kloud</h4>
+    <small>ISP Management System</small>
+  </div>
+  {% if user.is_authenticated %}
+  <div class="mt-3">
+    <div class="nav-section">Main</div>
+    <a class="nav-link {% block nav_dashboard %}{% endblock %}" href="{% url 'feasibility:dashboard' %}">
+      <i class="fas fa-tachometer-alt fa-fw"></i> Dashboard
+    </a>
+    <div class="nav-section">Feasibility</div>
+    <a class="nav-link {% block nav_feasibility %}{% endblock %}" href="{% url 'feasibility:dashboard' %}">
+      <i class="fas fa-map-marker-alt fa-fw"></i> Feasibility Requests
+    </a>
+    <a class="nav-link" href="{% url 'feasibility:create' %}">
+      <i class="fas fa-plus-circle fa-fw"></i> New Request
+    </a>
+    <a class="nav-link {% block nav_wo_create %}{% endblock %}" href="{% url 'feasibility:work_order_create' %}">
+      <i class="fas fa-file-circle-plus fa-fw"></i> Create Work Order
+    </a>
+    <div class="nav-section">Operations</div>
+    <a class="nav-link {% block nav_workorders %}{% endblock %}" href="{% url 'workorders:list' %}">
+      <i class="fas fa-file-contract fa-fw"></i> Work Orders
+    </a>
+    <a class="nav-link {% block nav_calculator %}{% endblock %}" href="{% url 'workorders:calculator' %}">
+      <i class="fas fa-calculator fa-fw"></i> Bandwidth Calculator
+    </a>
+    <div class="nav-section">Admin</div>
+    <a class="nav-link" href="/admin/">
+      <i class="fas fa-cog fa-fw"></i> Admin Panel
+    </a>
+    <a class="nav-link" href="{% url 'logout' %}">
+      <i class="fas fa-sign-out-alt fa-fw"></i> Logout
+    </a>
+  </div>
+  {% endif %}
+</nav>
+
+<!-- Main Content -->
+<div class="main-content">
+  <div class="topbar">
+    <h5 class="mb-0 fw-bold text-dark">{% block page_title %}Dashboard{% endblock %}</h5>
+    <div class="d-flex align-items-center gap-3">
+      {% if user.is_authenticated %}
+      <span class="text-muted"><i class="fas fa-user-circle me-1"></i> {{ user.get_full_name|default:user.username }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% for message in messages %}
+  <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+
+  {% block content %}{% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

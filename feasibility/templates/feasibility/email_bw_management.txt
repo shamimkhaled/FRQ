@@ -1,0 +1,36 @@
+KLOUD ISP — REVENUE SUMMARY (MANAGEMENT)
+=========================================
+
+Customer            : {{ f.customer_name }}
+{% if f.company_name %}Company             : {{ f.company_name }}{% endif %}
+Capacity            : {{ f.requested_capacity }} Mbps
+Provider            : {{ f.get_preferred_nttn_display }}
+
+{% if f.is_onboarded %}
+WORK ORDER DETAILS:
+  Work Order ID     : {{ f.work_order_label }}
+  Status            : {{ f.get_onboarding_status_display }}
+  NTTN Provider     : {{ f.get_preferred_nttn_display }}
+  Installation      : {{ f.installation_notes|default:"—" }}
+{% endif %}
+
+COMMERCIAL SUMMARY:
+{% for p in services %}  {{ p.service_type }} ({{ p.capacity_mbps }} Mbps x {{ p.quantity }}): BDT {{ p.total_monthly_charge|floatformat:2 }}/month
+{% empty %}  No services configured.
+{% endfor %}
+
+{% if pricing_summary %}
+REVENUE PROJECTION:
+  Monthly Revenue   : BDT {{ pricing_summary.total_monthly|floatformat:2 }}
+  One-Time Revenue  : BDT {{ pricing_summary.total_one_time|floatformat:2 }}
+  First Month Total : BDT {{ pricing_summary.grand_total|floatformat:2 }}
+{% endif %}
+
+ESTIMATED DEPLOYMENT COST: BDT {{ f.estimated_fiber_cost|floatformat:0 }}
+
+Bandwidth Status:
+{% for c in confirmations %}  {{ c.provider }}: {{ c.status }}
+{% empty %}  Pending
+{% endfor %}
+
+Kloud ISP Automated System

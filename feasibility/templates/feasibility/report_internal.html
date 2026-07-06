@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}Internal Report | {{ fr.customer_name }}{% endblock %}
+{% block page_title %}Internal Engineering Report{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="no-print mb-3 d-flex gap-2">
+      <a href="{% url 'feasibility:detail' fr.pk %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Back</a>
+      <button onclick="window.print()" class="btn btn-info btn-sm text-white"><i class="fas fa-print me-1"></i>Print / PDF</button>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-body p-4">
+        <div class="text-center mb-4 pb-3 border-bottom">
+          <h3 class="text-danger fw-bold mb-1"><i class="fas fa-lock me-2"></i>Kloud ISP — INTERNAL USE ONLY</h3>
+          <div class="text-muted small">Engineering Feasibility Report</div>
+          <div class="text-muted small">Generated: {% now "d M Y, H:i" %} | Report ID: FR-{{ fr.pk|stringformat:"04d" }}</div>
+        </div>
+
+        <h6 class="section-title">Customer Location Data</h6>
+        <table class="table table-bordered mb-4">
+          <tbody>
+            <tr><th class="bg-light" width="40%">Customer Latitude</th><td>{{ fr.latitude }}</td></tr>
+            <tr><th class="bg-light">Customer Longitude</th><td>{{ fr.longitude }}</td></tr>
+            <tr><th class="bg-light">Customer Address</th><td>{{ fr.address }}</td></tr>
+            {% if fr.nearest_pop %}
+            <tr><th class="bg-light">POP Name</th><td>{{ fr.nearest_pop.name }}</td></tr>
+            <tr><th class="bg-light">Kloud POP Latitude</th><td>{{ fr.nearest_pop.latitude }}</td></tr>
+            <tr><th class="bg-light">Kloud POP Longitude</th><td>{{ fr.nearest_pop.longitude }}</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+
+        <h6 class="section-title">Distance & Fiber Details</h6>
+        <table class="table table-bordered mb-4">
+          <tbody>
+            <tr><th class="bg-light" width="40%">Air Distance</th><td>{{ fr.air_distance_km|default:"—" }} km ({{ fr.distance_meters|default:"—" }} m)</td></tr>
+            <tr><th class="bg-light">Calculated Fiber/Route Distance</th><td>{{ fr.fiber_route_distance_km|default:"—" }} km</td></tr>
+            <tr><th class="bg-light">Estimated Fiber Cost</th><td>BDT {{ fr.estimated_fiber_cost|floatformat:0|default:"—" }}</td></tr>
+            <tr><th class="bg-light">Selected NTTN Provider</th><td>{{ fr.get_preferred_nttn_display|default:"—" }}</td></tr>
+            <tr><th class="bg-light">Supported Providers</th><td>{{ fr.supported_nttn|join:", " }}</td></tr>
+            <tr><th class="bg-light">Requested Capacity</th><td><strong>{{ fr.requested_capacity }} Mbps</strong></td></tr>
+            <tr><th class="bg-light">Capacity Availability</th><td>
+              {% with caps=fr.capacity_confirmations.all %}
+              {% if caps %}{% for c in caps %}{{ c.provider }}: {{ c.get_status_display }}{% if not forloop.last %}, {% endif %}{% endfor %}
+              {% else %}Pending confirmation{% endif %}
+              {% endwith %}
+            </td></tr>
+          </tbody>
+        </table>
+
+        <h6 class="section-title">Engineering Assessment</h6>
+        <table class="table table-bordered mb-4">
+          <tbody>
+            <tr><th class="bg-light" width="40%">Feasibility Status</th><td><strong>{{ fr.get_status_display }}</strong></td></tr>
+            <tr><th class="bg-light">Coverage Assessment</th><td>{{ coverage_message }}</td></tr>
+            <tr><th class="bg-light">Reviewed By</th><td>{{ fr.reviewed_by.get_full_name|default:"Pending Review" }}</td></tr>
+            <tr><th class="bg-light">Estimated Delivery</th><td>{% if fr.estimated_delivery_days %}{{ fr.estimated_delivery_days }} Working Days{% else %}—{% endif %}</td></tr>
+            <tr><th class="bg-light">Engineering Remarks</th><td>{{ fr.engineering_notes|default:"—" }}</td></tr>
+          </tbody>
+        </table>
+
+        {% with fr.bandwidth_confirmations as caps %}
+        {% if caps %}
+        <h6 class="section-title">Capacity Confirmations</h6>
+        <table class="table table-bordered mb-4">
+          <thead class="table-dark"><tr><th>Provider</th><th>Requested</th><th>Available</th><th>Status</th><th>Ref #</th><th>Date</th></tr></thead>
+          <tbody>
+            {% for c in caps %}
+            <tr>
+              <td>{{ c.provider }}</td>
+              <td>{{ c.requested_capacity }} Mbps</td>
+              <td>{{ c.available_capacity|default:"—" }} Mbps</td>
+              <td>{{ c.status }}</td>
+              <td>{{ c.provider_reference|default:"—" }}</td>
+              <td>{{ c.confirmation_date|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+        {% endwith %}
+
+        {% with fr.service_lines.all as services %}
+        {% if services %}
+        <h6 class="section-title">Service Configuration</h6>
+        <table class="table table-bordered mb-4">
+          <thead class="table-dark"><tr><th>Service</th><th>Bandwidth</th><th>Qty</th><th>Unit Price</th><th>Monthly</th><th>Total Payable</th></tr></thead>
+          <tbody>
+            {% for p in services %}
+            <tr>
+              <td>{{ p.service_type }}</td>
+              <td>{{ p.capacity_mbps }} Mbps</td>
+              <td>{{ p.quantity }}</td>
+              <td>{{ p.unit_price }}</td>
+              <td>BDT {{ p.total_monthly_charge|floatformat:2 }}</td>
+              <td>BDT {{ p.total_payable|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+        {% endwith %}
+
+        <div class="text-center text-muted small mt-4 pt-3 border-top text-danger">
+          CONFIDENTIAL — For internal Kloud Engineering use only. Do not share with clients.
+        </div>
+      </div>
+    </div>
+
+    <div class="card no-print">
+      <div class="card-header fw-semibold"><i class="fas fa-map me-2"></i>Interactive Route Map</div>
+      <div class="card-body">
+        {% include 'feasibility/includes/feasibility_map.html' %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

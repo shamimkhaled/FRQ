@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Create Work Order | Kloud{% endblock %}
+{% block page_title %}Create Work Order{% endblock %}
+{% block nav_feasibility %}active{% endblock %}
+{% block nav_wo_create %}active{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body">
+    <p class="text-muted mb-0">
+      <i class="fas fa-info-circle me-1"></i>
+      Select an <strong>approved</strong> feasibility request below to generate a work order. Customer and technical details will be filled in automatically.
+    </p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+    <span><i class="fas fa-file-circle-plus me-2 text-success"></i>Approved Requests — Ready for Work Order</span>
+    <span class="badge bg-success">{{ requests|length }} available</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>#</th>
+            <th>Customer</th>
+            <th>Company</th>
+            <th>Phone</th>
+            <th>Capacity</th>
+            <th>NTTN</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fr in requests %}
+          <tr>
+            <td class="text-muted">{{ fr.pk }}</td>
+            <td class="fw-semibold">{{ fr.customer_name }}</td>
+            <td>{{ fr.company_name|default:"—" }}</td>
+            <td class="small">{{ fr.phone_number }}</td>
+            <td><span class="badge bg-secondary">{{ fr.requested_capacity }} Mbps</span></td>
+            <td>{{ fr.get_preferred_nttn_display|default:"—" }}</td>
+            <td><span class="badge badge-status-{{ fr.status }} rounded-pill">{{ fr.get_status_display }}</span></td>
+            <td>
+              <div class="btn-group btn-group-sm">
+                <a href="{% url 'feasibility:detail' fr.pk %}" class="btn btn-outline-primary" title="View Feasibility"><i class="fas fa-eye"></i></a>
+                <a href="{% url 'feasibility:edit' fr.pk %}" class="btn btn-outline-warning" title="Edit Feasibility"><i class="fas fa-edit"></i></a>
+                <a href="{% url 'workorders:create' fr.pk %}" class="btn btn-success" title="Create Work Order">
+                  <i class="fas fa-file-circle-plus me-1"></i>Create WO
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-5">
+              <i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>
+              No approved requests are waiting for a work order.
+              <div class="mt-2 small">Approve a feasibility request first, then return here.</div>
+              <a href="{% url 'feasibility:dashboard' %}" class="btn btn-sm btn-outline-primary mt-3">Go to Feasibility Dashboard</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+<div class="card mb-3">
+  <div class="card-header fw-semibold"><i class="fas fa-project-diagram me-2"></i>Onboarding Workflow</div>
+  <div class="card-body py-3">
+    <div class="d-flex flex-wrap gap-1 align-items-center">
+      {% for step_key, step_label in workflow_steps %}
+      <div class="d-flex align-items-center">
+        <span class="badge rounded-pill px-2 py-1 {% if workflow_current == step_key %}bg-primary{% elif forloop.counter0 < workflow_steps|length %}bg-light text-muted border{% else %}bg-light text-muted border{% endif %}"
+              style="font-size:10px;">
+          {{ step_label }}
+        </span>
+        {% if not forloop.last %}<i class="fas fa-chevron-right text-muted mx-1" style="font-size:10px;"></i>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>

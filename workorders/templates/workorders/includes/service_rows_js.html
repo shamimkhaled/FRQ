@@ -1,0 +1,62 @@
+<script>
+const SERVICE_TYPES = {{ service_types|safe }};
+const UNIT_PRICES = {{ unit_prices|safe }};
+const EXISTING = {{ existing_services|safe }};
+let rowIndex = 0;
+let lastRowData = null;
+
+function calcAll() {
+  let sub = 0, mbps = 0;
+  const vatPct = parseFloat(document.getElementById('woVat')?.value) || 15;
+  const disc = parseFloat(document.getElementById('woDiscount')?.value) || 0;
+  document.querySelectorAll('#svcBody tr').forEach(row => {
+    const cap = parseFloat(row.querySelector('.svc-mbps').value) || 0;
+    const price = parseFloat(row.querySelector('.svc-price').value) || 0;
+    const qty = parseInt(row.querySelector('.svc-qty').value) || 1;
+    const line = cap * price * qty;
+    sub += line;
+    mbps += cap * qty;
+    row.querySelector('.svc-total').textContent = 'BDT ' + line.toLocaleString();
+  });
+  const vat = sub * vatPct / 100;
+  const grand = sub + vat - disc;
+  document.getElementById('sumMbps').textContent = mbps;
+  document.getElementById('sumSub').textContent = 'BDT ' + sub.toLocaleString();
+  document.getElementById('sumVat').textContent = 'BDT ' + vat.toLocaleString();
+  document.getElementById('sumGrand').textContent = 'BDT ' + grand.toLocaleString();
+}
+
+function addRow(data) {
+  const idx = rowIndex++;
+  const tr = document.createElement('tr');
+  const opts = SERVICE_TYPES.map(([v,l]) => `<option value="${v}" ${data&&data.service_type===v?'selected':''}>${v}</option>`).join('');
+  tr.innerHTML = `
+    <td><select name="service_${idx}_type" class="form-select form-select-sm svc-type">${opts}</select></td>
+    <td><input name="service_${idx}_capacity" class="form-control form-control-sm svc-mbps" type="number" min="1" value="${data?data.capacity_mbps:''}"></td>
+    <td><input name="service_${idx}_unit_price" class="form-control form-control-sm svc-price" type="number" step="any" value="${data?data.unit_price:''}"></td>
+    <td><input name="service_${idx}_quantity" class="form-control form-control-sm svc-qty" type="number" min="1" value="${data?data.quantity:1}"></td>
+    <td class="svc-total fw-bold small">BDT 0</td>
+    <td><button type="button" class="btn btn-sm btn-outline-danger rm"><i class="fas fa-trash"></i></button></td>
+    <input type="hidden" name="service_${idx}_vat" value="15">
+    <input type="hidden" name="service_${idx}_installation" value="0">
+    <input type="hidden" name="service_${idx}_discount" value="0">`;
+  document.getElementById('svcBody').appendChild(tr);
+  const sel = tr.querySelector('.svc-type');
+  if (!data) tr.querySelector('.svc-price').value = UNIT_PRICES[sel.value] || '';
+  sel.addEventListener('change', e => { tr.querySelector('.svc-price').value = UNIT_PRICES[e.target.value]||''; calcAll(); });
+  tr.querySelectorAll('input').forEach(i => i.addEventListener('input', calcAll));
+  tr.querySelector('.rm').addEventListener('click', () => { tr.remove(); calcAll(); });
+  tr.querySelectorAll('input,select').forEach(el => el.addEventListener('change', () => {
+    lastRowData = { service_type: sel.value, capacity_mbps: tr.querySelector('.svc-mbps').value, unit_price: tr.querySelector('.svc-price').value, quantity: tr.querySelector('.svc-qty').value };
+  }));
+  calcAll();
+}
+
+document.getElementById('addRow').addEventListener('click', () => addRow(null));
+document.getElementById('dupRow').addEventListener('click', () => { if (lastRowData) addRow(lastRowData); });
+document.getElementById('woVat')?.addEventListener('input', calcAll);
+document.getElementById('woDiscount')?.addEventListener('input', calcAll);
+
+const seed = EXISTING.length ? EXISTING : [{service_type:'IPT', capacity_mbps:{{ fr.requested_capacity }}, unit_price:100, quantity:1}];
+seed.forEach(addRow);
+</script>

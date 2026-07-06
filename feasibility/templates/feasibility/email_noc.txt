@@ -1,0 +1,23 @@
+KLOUD ISP — FEASIBILITY RESULT (NOC TEAM)
+==========================================
+
+Customer Name       : {{ f.customer_name }}
+Address             : {{ f.address }}
+Latitude            : {{ f.latitude }}
+Longitude           : {{ f.longitude }}
+
+Requested Capacity  : {{ f.requested_capacity }} Mbps
+Selected Provider   : {{ f.get_preferred_nttn_display }}
+Supported Providers : {{ f.supported_nttn|join:", " }}
+
+Nearest POP         : {% if f.nearest_pop %}{{ f.nearest_pop.name }}{% else %}N/A{% endif %}
+Air Distance        : {{ f.air_distance_km }} km
+Fiber Route Distance: {{ f.fiber_route_distance_km }} km
+
+Feasibility Status  : {{ f.get_status_display|upper }}
+Engineering Notes   : {{ f.engineering_notes }}
+
+---
+Action required: Please verify upstream capacity with selected NTTN provider.
+
+Kloud ISP Automated System

@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}Work Orders | Kloud{% endblock %}
+{% block page_title %}Work Orders{% endblock %}
+{% block nav_workorders %}active{% endblock %}
+
+{% block content %}
+<!-- Summary widgets -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3 col-xl">
+    <div class="stat-card" style="background:linear-gradient(135deg,#1565c0,#42a5f5)">
+      <i class="fas fa-file-contract icon"></i>
+      <div class="fs-4 fw-bold">{{ stats.total_wo }}</div>
+      <div class="small opacity-75">Total Work Orders</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 col-xl">
+    <div class="stat-card" style="background:linear-gradient(135deg,#e65100,#ffa726)">
+      <i class="fas fa-clock icon"></i>
+      <div class="fs-4 fw-bold">{{ stats.pending_wo }}</div>
+      <div class="small opacity-75">Pending</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 col-xl">
+    <div class="stat-card" style="background:linear-gradient(135deg,#2e7d32,#66bb6a)">
+      <i class="fas fa-check icon"></i>
+      <div class="fs-4 fw-bold">{{ stats.approved_wo }}</div>
+      <div class="small opacity-75">Approved</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 col-xl">
+    <div class="stat-card" style="background:linear-gradient(135deg,#6a1b9a,#ab47bc)">
+      <i class="fas fa-network-wired icon"></i>
+      <div class="fs-4 fw-bold">{{ stats.pending_bandwidth }}</div>
+      <div class="small opacity-75">Pending BW</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 col-xl">
+    <div class="stat-card" style="background:linear-gradient(135deg,#00838f,#26c6da)">
+      <i class="fas fa-signal icon"></i>
+      <div class="fs-4 fw-bold">{{ stats.confirmed_bandwidth }}</div>
+      <div class="small opacity-75">Confirmed BW</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 col-xl">
+    <div class="stat-card" style="background:linear-gradient(135deg,#4527a0,#7e57c2)">
+      <i class="fas fa-tachometer-alt icon"></i>
+      <div class="fs-4 fw-bold">{{ stats.total_mbps }}</div>
+      <div class="small opacity-75">Total Mbps</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 col-xl">
+    <div class="stat-card" style="background:linear-gradient(135deg,#1b5e20,#43a047)">
+      <i class="fas fa-coins icon"></i>
+      <div class="fs-4 fw-bold">{{ stats.total_revenue|floatformat:0 }}</div>
+      <div class="small opacity-75">Monthly Revenue (BDT)</div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold">Search</label>
+        <input type="text" name="search" class="form-control" value="{{ search }}" placeholder="Customer, phone, company...">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold">WO Status</label>
+        <select name="status" class="form-select">
+          <option value="">All</option>
+          {% for val, label in onboarding_statuses %}
+          <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold">Bandwidth</label>
+        <select name="bw_status" class="form-select">
+          <option value="">All</option>
+          <option value="pending" {% if bw_status_filter == 'pending' %}selected{% endif %}>Pending</option>
+          <option value="confirmed" {% if bw_status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
+          <option value="rejected" {% if bw_status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold">Sort</label>
+        <select name="sort" class="form-select">
+          <option value="created" {% if sort == 'created' %}selected{% endif %}>Created Date</option>
+          <option value="customer" {% if sort == 'customer' %}selected{% endif %}>Customer</option>
+          <option value="capacity" {% if sort == 'capacity' %}selected{% endif %}>Capacity</option>
+          <option value="status" {% if sort == 'status' %}selected{% endif %}>Status</option>
+        </select>
+      </div>
+      <div class="col-md-1">
+        <select name="dir" class="form-select">
+          <option value="desc" {% if dir == 'desc' %}selected{% endif %}>Desc</option>
+          <option value="asc" {% if dir == 'asc' %}selected{% endif %}>Asc</option>
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-1">
+        <button type="submit" class="btn btn-primary flex-fill"><i class="fas fa-filter"></i></button>
+        <a href="?export=csv&amp;search={{ search }}&amp;status={{ status_filter }}&amp;bw_status={{ bw_status_filter }}&amp;sort={{ sort }}&amp;dir={{ dir }}" class="btn btn-outline-success" title="Export Excel/CSV"><i class="fas fa-file-excel"></i></a>
+        <a href="{% url 'workorders:list' %}" class="btn btn-outline-secondary"><i class="fas fa-times"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>WO ID</th>
+            <th>Customer</th>
+            <th>Company</th>
+            <th>Phone</th>
+            <th class="d-none d-lg-table-cell">Address</th>
+            <th>NTTN</th>
+            <th>Capacity</th>
+            <th>WO Status</th>
+            <th>BW Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fr in page %}
+          <tr>
+            <td class="fw-semibold">{{ fr.work_order_label }}</td>
+            <td>{{ fr.customer_name }}</td>
+            <td>{{ fr.company_name|default:"—" }}</td>
+            <td class="small">{{ fr.phone_number }}</td>
+            <td class="small d-none d-lg-table-cell text-truncate" style="max-width:160px">{{ fr.address }}</td>
+            <td>{{ fr.get_preferred_nttn_display|default:"—" }}</td>
+            <td>{{ fr.requested_capacity }} Mbps</td>
+            <td><span class="badge bg-primary">{{ fr.get_onboarding_status_display }}</span></td>
+            <td><span class="badge bg-secondary">{{ fr.bandwidth_status_label }}</span></td>
+            <td class="small text-muted">{{ fr.created_at|date:"d M Y" }}</td>
+            <td>
+              <div class="btn-group btn-group-sm">
+                <a href="{% url 'workorders:detail' fr.pk %}" class="btn btn-outline-primary" title="View"><i class="fas fa-eye"></i></a>
+                <a href="{% url 'workorders:edit' fr.pk %}" class="btn btn-outline-warning" title="Edit"><i class="fas fa-edit"></i></a>
+                <a href="{% url 'workorders:print' fr.pk %}" class="btn btn-outline-secondary" title="Print" target="_blank"><i class="fas fa-print"></i></a>
+                <a href="{% url 'workorders:delete' fr.pk %}" class="btn btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="11" class="text-center text-muted py-4">No work orders found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% if page.paginator.num_pages > 1 %}
+  <div class="card-footer d-flex justify-content-between align-items-center">
+    <span class="small text-muted">Page {{ page.number }} of {{ page.paginator.num_pages }} ({{ page.paginator.count }} total)</span>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if page.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page.previous_page_number }}&amp;search={{ search }}&amp;status={{ status_filter }}&amp;sort={{ sort }}&amp;dir={{ dir }}">Prev</a></li>
+        {% endif %}
+        {% if page.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page.next_page_number }}&amp;search={{ search }}&amp;status={{ status_filter }}&amp;sort={{ sort }}&amp;dir={{ dir }}">Next</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+KLOUD ISP — SERVICE PRICING & BILLING (ACCOUNTS DEPT)
+======================================================
+
+Customer            : {{ f.customer_name }}
+{% if f.company_name %}Company             : {{ f.company_name }}{% endif %}
+Phone               : {{ f.phone_number }}
+Capacity            : {{ f.requested_capacity }} Mbps
+Provider            : {{ f.get_preferred_nttn_display }}
+
+Service Pricing Breakdown:
+{% for p in services %}
+  Service           : {{ p.service_type }}
+  Capacity          : {{ p.capacity_mbps }} Mbps
+  Quantity          : {{ p.quantity }}
+  Unit Price        : BDT {{ p.unit_price }}
+  Monthly Charge    : BDT {{ p.monthly_price }}
+  VAT ({{ p.vat_percent }}%)    : BDT {% widthratio p.monthly_price 100 p.vat_percent %}
+  Total Monthly     : BDT {{ p.total_monthly_charge|floatformat:2 }}
+  Installation      : BDT {{ p.installation_charge|floatformat:2 }}
+  Fiber Deployment  : BDT {{ p.fiber_deployment_charge|floatformat:2 }}
+  One-Time          : BDT {{ p.one_time_charge|floatformat:2 }}
+  Total Payable     : BDT {{ p.total_payable|floatformat:2 }}
+{% empty %}
+  No services configured.
+{% endfor %}
+
+{% if pricing_summary %}
+SUMMARY:
+  Subtotal Monthly  : BDT {{ pricing_summary.subtotal_monthly|floatformat:2 }}
+  Total Monthly     : BDT {{ pricing_summary.total_monthly|floatformat:2 }}
+  One-Time Charges  : BDT {{ pricing_summary.total_one_time|floatformat:2 }}
+  GRAND TOTAL       : BDT {{ pricing_summary.grand_total|floatformat:2 }}
+{% endif %}
+
+Fiber Cost Estimate : BDT {{ f.estimated_fiber_cost|floatformat:0 }}
+
+{% if f.is_onboarded %}Work Order          : {{ f.work_order_label }}{% endif %}
+
+Kloud ISP Automated System

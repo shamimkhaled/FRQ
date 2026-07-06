@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block title %}{{ fr.customer_name }} | Kloud{% endblock %}
+{% block page_title %}Feasibility Request #{{ fr.pk }}{% endblock %}
+
+{% block content %}
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <a href="{% url 'feasibility:dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Back</a>
+  <a href="{% url 'feasibility:edit' fr.pk %}" class="btn btn-warning btn-sm"><i class="fas fa-edit me-1"></i>Edit</a>
+  <a href="{% url 'feasibility:review' fr.pk %}" class="btn btn-outline-warning btn-sm"><i class="fas fa-clipboard-check me-1"></i>Review</a>
+  <a href="{% url 'feasibility:client_report' fr.pk %}" class="btn btn-success btn-sm"><i class="fas fa-file me-1"></i>Client Report</a>
+  <a href="{% url 'feasibility:internal_report' fr.pk %}" class="btn btn-info btn-sm text-white"><i class="fas fa-file-alt me-1"></i>Internal Report</a>
+  {% if fr.can_create_work_order %}
+  <a href="{% url 'workorders:create' fr.pk %}" class="btn btn-success btn-sm"><i class="fas fa-file-circle-plus me-1"></i>Create Work Order</a>
+  {% elif fr.is_onboarded %}
+  <a href="{% url 'workorders:detail' fr.pk %}" class="btn btn-dark btn-sm"><i class="fas fa-file-contract me-1"></i>{{ fr.work_order_label }}</a>
+  {% endif %}
+</div>
+
+{% if fr.can_create_work_order %}
+<div class="alert alert-success d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+  <div>
+    <i class="fas fa-file-circle-plus me-2"></i>
+    <strong>Ready for Work Order</strong> — This feasibility request is approved. Create a work order to continue onboarding.
+  </div>
+  <a href="{% url 'workorders:create' fr.pk %}" class="btn btn-success btn-sm">
+    <i class="fas fa-file-circle-plus me-1"></i>Create Work Order
+  </a>
+</div>
+{% elif fr.status != 'not_feasible' and fr.status != 'rejected' and not fr.can_onboard %}
+<div class="alert alert-warning py-2 mb-3 small">
+  <i class="fas fa-clock me-1"></i> Approve this feasibility request (mark as <strong>Feasible</strong>) to enable work order creation.
+</div>
+{% endif %}
+
+{% include 'feasibility/includes/workflow_progress.html' %}
+
+<div class="alert alert-{% if coverage_code == 'standard' %}success{% elif coverage_code == 'extended' %}warning{% else %}danger{% endif %} py-2 mb-3">
+  <i class="fas fa-satellite-dish me-1"></i> <strong>Coverage Assessment:</strong> {{ coverage_message }}
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-semibold"><i class="fas fa-user me-2 text-primary"></i>Customer Information</div>
+      <div class="card-body">
+        <table class="table table-sm table-borderless mb-0">
+          <tr><th class="text-muted small" width="40%">Customer Name</th><td>{{ fr.customer_name }}</td></tr>
+          <tr><th class="text-muted small">Proprietor</th><td>{{ fr.proprietor_name|default:"—" }}</td></tr>
+          <tr><th class="text-muted small">Company</th><td>{{ fr.company_name|default:"—" }}</td></tr>
+          <tr><th class="text-muted small">Phone</th><td>{{ fr.phone_number }}</td></tr>
+          <tr><th class="text-muted small">Address</th><td>{{ fr.address }}</td></tr>
+          <tr><th class="text-muted small">Submitted By</th><td>{{ fr.submitted_by.get_full_name|default:fr.submitted_by.username }}</td></tr>
+          <tr><th class="text-muted small">Date</th><td>{{ fr.created_at|date:"d M Y, H:i" }}</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-semibold"><i class="fas fa-network-wired me-2 text-info"></i>Technical Details</div>
+      <div class="card-body">
+        <table class="table table-sm table-borderless mb-0">
+          <tr><th class="text-muted small" width="40%">Latitude</th><td>{{ fr.latitude }}</td></tr>
+          <tr><th class="text-muted small">Longitude</th><td>{{ fr.longitude }}</td></tr>
+          <tr><th class="text-muted small">Requested Capacity</th><td><strong>{{ fr.requested_capacity }} Mbps</strong></td></tr>
+          <tr><th class="text-muted small">Preferred NTTN</th><td>{{ fr.get_preferred_nttn_display|default:"—" }}</td></tr>
+          <tr><th class="text-muted small">Supported NTTN</th><td>{{ fr.supported_nttn|join:", " }}</td></tr>
+          <tr><th class="text-muted small">Status</th>
+            <td><span class="badge badge-status-{{ fr.status }} rounded-pill px-3 py-2">{{ fr.get_status_display }}</span></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-semibold"><i class="fas fa-map-marker-alt me-2 text-danger"></i>POP & Distance Calculation</div>
+      <div class="card-body">
+        {% if fr.nearest_pop %}
+        <table class="table table-sm table-borderless mb-0">
+          <tr><th class="text-muted small" width="50%">Nearest POP</th><td>{{ fr.nearest_pop.name }}</td></tr>
+          <tr><th class="text-muted small">POP Latitude</th><td>{{ fr.nearest_pop.latitude }}</td></tr>
+          <tr><th class="text-muted small">POP Longitude</th><td>{{ fr.nearest_pop.longitude }}</td></tr>
+          <tr><th class="text-muted small">Air Distance</th><td>{{ fr.air_distance_km }} km ({{ fr.distance_meters }} m)</td></tr>
+          <tr><th class="text-muted small">Fiber Route Distance</th><td>{{ fr.fiber_route_distance_km }} km</td></tr>
+          <tr><th class="text-muted small">Est. Fiber Cost</th><td>BDT {{ fr.estimated_fiber_cost|floatformat:0 }}</td></tr>
+        </table>
+        {% else %}
+        <p class="text-muted">No POP locations configured. Add POP locations in Admin panel.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header fw-semibold"><i class="fas fa-clipboard-check me-2 text-success"></i>Review & Remarks</div>
+      <div class="card-body">
+        <table class="table table-sm table-borderless mb-0">
+          <tr><th class="text-muted small" width="40%">Reviewed By</th><td>{{ fr.reviewed_by.get_full_name|default:"—" }}</td></tr>
+          <tr><th class="text-muted small">Est. Delivery</th><td>{% if fr.estimated_delivery_days %}{{ fr.estimated_delivery_days }} Working Days{% else %}—{% endif %}</td></tr>
+          <tr><th class="text-muted small">Emails Sent</th><td>{% if fr.emails_sent %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td></tr>
+        </table>
+        {% if fr.remarks %}
+        <div class="mt-3"><div class="text-muted small fw-semibold mb-1">Remarks</div><p class="mb-0 small">{{ fr.remarks }}</p></div>
+        {% endif %}
+        {% if fr.engineering_notes %}
+        <div class="mt-3"><div class="text-muted small fw-semibold mb-1">Engineering Notes</div><p class="mb-0 small">{{ fr.engineering_notes }}</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header fw-semibold"><i class="fas fa-map me-2 text-primary"></i>Location Map</div>
+      <div class="card-body">
+        {% include 'feasibility/includes/feasibility_map.html' with map_height='350' %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

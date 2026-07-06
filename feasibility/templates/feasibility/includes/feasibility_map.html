@@ -1,0 +1,63 @@
+{% if fr.nearest_pop %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<div id="feasibility-map" style="height: {{ map_height|default:'400' }}px; border-radius: 12px; z-index: 1;"></div>
+<div class="card mt-3">
+  <div class="card-body py-2">
+    <div class="row text-center small">
+      <div class="col-md-3">
+        <div class="text-muted">Air Distance</div>
+        <strong>{{ fr.air_distance_km }} km</strong>
+        <div class="text-muted">({{ fr.distance_meters }} m)</div>
+      </div>
+      <div class="col-md-3">
+        <div class="text-muted">Fiber Route</div>
+        <strong>{{ fr.fiber_route_distance_km }} km</strong>
+      </div>
+      <div class="col-md-3">
+        <div class="text-muted">Customer</div>
+        <strong>{{ fr.latitude }}, {{ fr.longitude }}</strong>
+      </div>
+      <div class="col-md-3">
+        <div class="text-muted">POP ({{ fr.nearest_pop.name }})</div>
+        <strong>{{ fr.nearest_pop.latitude }}, {{ fr.nearest_pop.longitude }}</strong>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  const customerLat = {{ fr.latitude }};
+  const customerLng = {{ fr.longitude }};
+  const popLat = {{ fr.nearest_pop.latitude }};
+  const popLng = {{ fr.nearest_pop.longitude }};
+  const map = L.map('feasibility-map').setView(
+    [(customerLat + popLat) / 2, (customerLng + popLng) / 2], 12
+  );
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+  const customerIcon = L.divIcon({
+    className: '',
+    html: '<div style="background:#1565c0;color:#fff;padding:4px 8px;border-radius:20px;font-size:11px;font-weight:bold;white-space:nowrap;"><i class="fas fa-user"></i> Customer</div>',
+    iconSize: [80, 24], iconAnchor: [40, 24]
+  });
+  const popIcon = L.divIcon({
+    className: '',
+    html: '<div style="background:#c62828;color:#fff;padding:4px 8px;border-radius:20px;font-size:11px;font-weight:bold;white-space:nowrap;"><i class="fas fa-broadcast-tower"></i> Kloud POP</div>',
+    iconSize: [90, 24], iconAnchor: [45, 24]
+  });
+  L.marker([customerLat, customerLng], {icon: customerIcon}).addTo(map)
+    .bindPopup('<strong>Customer</strong><br>{{ fr.customer_name|escapejs }}<br>{{ fr.address|truncatechars:60|escapejs }}');
+  L.marker([popLat, popLng], {icon: popIcon}).addTo(map)
+    .bindPopup('<strong>{{ fr.nearest_pop.name|escapejs }}</strong><br>{{ fr.nearest_pop.address|truncatechars:60|escapejs }}');
+  const route = L.polyline([[customerLat, customerLng], [popLat, popLng]], {
+    color: '#4fc3f7', weight: 4, dashArray: '8, 8', opacity: 0.85
+  }).addTo(map);
+  route.bindPopup('Distance: {{ fr.air_distance_km }} km ({{ fr.distance_meters }} m)');
+  map.fitBounds(route.getBounds(), {padding: [40, 40]});
+})();
+</script>
+{% else %}
+<div class="alert alert-warning mb-0">No POP location available for map display.</div>
+{% endif %}

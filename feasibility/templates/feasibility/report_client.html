@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Client Report | {{ fr.customer_name }}{% endblock %}
+{% block page_title %}Client Feasibility Report{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="no-print mb-3 d-flex gap-2">
+      <a href="{% url 'feasibility:detail' fr.pk %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Back</a>
+      <button onclick="window.print()" class="btn btn-primary btn-sm"><i class="fas fa-print me-1"></i>Print / PDF</button>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-body p-4">
+        <div class="text-center mb-4 pb-3 border-bottom">
+          <h3 class="text-primary fw-bold mb-1"><i class="fas fa-cloud me-2"></i>Kloud ISP</h3>
+          <div class="text-muted small">Feasibility Report — Client Copy</div>
+          <div class="text-muted small">Generated: {% now "d M Y, H:i" %}</div>
+        </div>
+
+        <div class="alert {% if fr.status == 'feasible' %}alert-success{% elif fr.status == 'feasible_additional_cost' %}alert-warning{% elif fr.status == 'not_feasible' %}alert-danger{% else %}alert-info{% endif %} text-center fw-bold mb-4">
+          Feasibility Status: {{ fr.get_status_display|upper }}
+        </div>
+
+        <table class="table table-bordered">
+          <tbody>
+            <tr><th width="40%" class="bg-light">Customer Name</th><td>{{ fr.customer_name }}</td></tr>
+            {% if fr.company_name %}<tr><th class="bg-light">Company</th><td>{{ fr.company_name }}</td></tr>{% endif %}
+            <tr><th class="bg-light">Address</th><td>{{ fr.address }}</td></tr>
+            <tr><th class="bg-light">Phone Number</th><td>{{ fr.phone_number }}</td></tr>
+            <tr><th class="bg-light">Latitude</th><td>{{ fr.latitude }}</td></tr>
+            <tr><th class="bg-light">Longitude</th><td>{{ fr.longitude }}</td></tr>
+            <tr><th class="bg-light">Distance Covered</th><td>{{ fr.distance_to_pop_km|default:"—" }} km ({{ fr.distance_meters|default:"—" }} m)</td></tr>
+            <tr><th class="bg-light">Requested Capacity</th><td>{{ fr.requested_capacity }} Mbps</td></tr>
+            <tr><th class="bg-light">Selected Provider</th><td>{{ fr.get_preferred_nttn_display|default:"—" }}</td></tr>
+            <tr><th class="bg-light">Feasibility Status</th><td><strong>{{ fr.get_status_display }}</strong></td></tr>
+            <tr><th class="bg-light">Estimated Delivery</th><td>{% if fr.estimated_delivery_days %}{{ fr.estimated_delivery_days }} Working Days{% else %}To be confirmed{% endif %}</td></tr>
+            <tr><th class="bg-light">Remarks</th><td>{{ fr.remarks|default:"—" }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card no-print">
+      <div class="card-header fw-semibold"><i class="fas fa-map me-2"></i>Location & Route Map</div>
+      <div class="card-body">
+        {% include 'feasibility/includes/feasibility_map.html' %}
+      </div>
+    </div>
+
+    <div class="text-center text-muted small mt-4">
+      For queries, contact: noc@kloud.com | Kloud ISP Ltd.
+    </div>
+  </div>
+</div>
+{% endblock %}

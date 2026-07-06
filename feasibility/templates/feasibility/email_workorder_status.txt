@@ -1,0 +1,14 @@
+KLOUD ISP — WORK ORDER STATUS UPDATE
+=====================================
+
+Work Order          : {{ f.work_order_label }}
+Customer            : {{ f.customer_name }}
+Status Change       : {{ old_status }} → {{ new_status }}
+
+Services:
+{% for p in services %}  - {{ p.service_type }}: {{ p.capacity_mbps }} Mbps
+{% endfor %}
+
+{% if pricing_summary %}Monthly Revenue: BDT {{ pricing_summary.total_monthly|floatformat:2 }}{% endif %}
+
+Kloud ISP Automated System

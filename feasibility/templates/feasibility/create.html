@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}{% if edit_mode %}Edit{% else %}New{% endif %} Feasibility Request | Kloud{% endblock %}
+{% block page_title %}{% if edit_mode %}Edit Feasibility #{{ fr.pk }}{% else %}New Feasibility Request{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header {% if edit_mode %}bg-warning text-dark{% else %}bg-primary text-white{% endif %}">
+        <i class="fas fa-{% if edit_mode %}edit{% else %}map-marker-alt{% endif %} me-2"></i>
+        {% if edit_mode %}Edit Feasibility Request{% else %}Submit Feasibility Request{% endif %}
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="section-title">Customer Information</div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label">Customer Name <span class="text-danger">*</span></label>
+              <input type="text" name="customer_name" class="form-control {% if form.customer_name.errors %}is-invalid{% endif %}" value="{{ form.customer_name.value|default:'' }}">
+              {% for e in form.customer_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Proprietor Name</label>
+              <input type="text" name="proprietor_name" class="form-control" value="{{ form.proprietor_name.value|default:'' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Company Name</label>
+              <input type="text" name="company_name" class="form-control" value="{{ form.company_name.value|default:'' }}" placeholder="Optional">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Phone Number <span class="text-danger">*</span></label>
+              <input type="text" name="phone_number" class="form-control {% if form.phone_number.errors %}is-invalid{% endif %}" value="{{ form.phone_number.value|default:'' }}">
+              {% for e in form.phone_number.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Requested Capacity (Mbps) <span class="text-danger">*</span></label>
+              <input type="number" name="requested_capacity" class="form-control {% if form.requested_capacity.errors %}is-invalid{% endif %}" value="{{ form.requested_capacity.value|default:'' }}" placeholder="e.g. 100">
+              {% for e in form.requested_capacity.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Address <span class="text-danger">*</span></label>
+              <textarea name="address" rows="2" class="form-control {% if form.address.errors %}is-invalid{% endif %}">{{ form.address.value|default:'' }}</textarea>
+              {% for e in form.address.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+
+          <div class="section-title">Location Coordinates</div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label">Latitude <span class="text-danger">*</span></label>
+              <input type="number" step="any" name="latitude" class="form-control {% if form.latitude.errors %}is-invalid{% endif %}" value="{{ form.latitude.value|default:'' }}" placeholder="e.g. 23.8103">
+              {% for e in form.latitude.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              <small class="text-muted">Must be between -90 and +90</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Longitude <span class="text-danger">*</span></label>
+              <input type="number" step="any" name="longitude" class="form-control {% if form.longitude.errors %}is-invalid{% endif %}" value="{{ form.longitude.value|default:'' }}" placeholder="e.g. 90.4125">
+              {% for e in form.longitude.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              <small class="text-muted">Must be between -180 and +180</small>
+            </div>
+          </div>
+
+          <div class="section-title">NTTN Provider</div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label">Preferred NTTN <span class="text-danger">*</span></label>
+              <select name="preferred_nttn" class="form-select {% if form.preferred_nttn.errors %}is-invalid{% endif %}">
+                <option value="">-- Select --</option>
+                <option value="SCL" {% if form.preferred_nttn.value == 'SCL' %}selected{% endif %}>SCL</option>
+                <option value="fiber_home" {% if form.preferred_nttn.value == 'fiber_home' %}selected{% endif %}>Fiber@Home</option>
+                <option value="bahon" {% if form.preferred_nttn.value == 'bahon' %}selected{% endif %}>Bahon</option>
+                <option value="level3" {% if form.preferred_nttn.value == 'level3' %}selected{% endif %}>Level3</option>
+              </select>
+              {% for e in form.preferred_nttn.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Supported NTTN Providers <span class="text-danger">*</span></label>
+              {% for choice in form.supported_nttn %}
+              <div class="form-check">
+                {{ choice.tag }}
+                <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+              </div>
+              {% endfor %}
+              {% for e in form.supported_nttn.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{% if edit_mode %}{% url 'feasibility:detail' fr.pk %}{% else %}{% url 'feasibility:dashboard' %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn {% if edit_mode %}btn-warning{% else %}btn-primary{% endif %}">
+              <i class="fas fa-{% if edit_mode %}save{% else %}paper-plane{% endif %} me-1"></i>
+              {% if edit_mode %}Save Changes{% else %}Submit Request{% endif %}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

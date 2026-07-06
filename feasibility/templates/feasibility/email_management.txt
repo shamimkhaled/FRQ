@@ -1,0 +1,18 @@
+KLOUD ISP — FEASIBILITY COMMERCIAL SUMMARY (MANAGEMENT)
+========================================================
+
+Customer            : {{ f.customer_name }}
+Address             : {{ f.address }}
+Requested Capacity  : {{ f.requested_capacity }} Mbps
+
+Feasibility Status  : {{ f.get_status_display|upper }}
+Estimated Delivery  : {% if f.estimated_delivery_days %}{{ f.estimated_delivery_days }} Working Days{% else %}TBD{% endif %}
+
+Deployment Cost Estimate:
+  Fiber Cost        : BDT {{ f.estimated_fiber_cost|floatformat:0 }}
+  Distance          : {{ f.fiber_route_distance_km }} km
+
+Remarks: {{ f.remarks }}
+
+---
+Kloud ISP Automated System

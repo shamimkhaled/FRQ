@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Delete Work Order | Kloud{% endblock %}
+{% block page_title %}Delete {{ fr.work_order_label }}{% endblock %}
+{% block nav_workorders %}active{% endblock %}
+
+{% block content %}
+<div class="card mx-auto" style="max-width:520px">
+  <div class="card-body text-center p-4">
+    <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+    <h5>Delete this work order?</h5>
+    <p class="text-muted">This will remove <strong>{{ fr.work_order_label }}</strong> for <strong>{{ fr.customer_name }}</strong> and clear all services and bandwidth confirmations. The feasibility request will remain.</p>
+    <form method="post" class="d-flex gap-2 justify-content-center">
+      {% csrf_token %}
+      <a href="{% url 'workorders:detail' fr.pk %}" class="btn btn-outline-secondary">Cancel</a>
+      <button type="submit" class="btn btn-danger">Delete Work Order</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

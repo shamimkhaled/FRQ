@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block title %}{% if edit_mode %}Edit{% else %}Create{% endif %} Work Order | Kloud{% endblock %}
+{% block page_title %}{% if edit_mode %}{{ fr.work_order_label }}{% else %}Create Work Order{% endif %}{% endblock %}
+{% block nav_workorders %}active{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card sticky-top" style="top:20px">
+      <div class="card-header bg-success text-white fw-semibold">From Feasibility #{{ fr.pk }}</div>
+      <div class="card-body small">
+        <table class="table table-sm table-borderless mb-0">
+          <tr><th class="text-muted">Customer</th><td>{{ fr.customer_name }}</td></tr>
+          <tr><th class="text-muted">Contact</th><td>{{ fr.proprietor_name|default:"—" }}</td></tr>
+          <tr><th class="text-muted">Company</th><td>{{ fr.company_name|default:"—" }}</td></tr>
+          <tr><th class="text-muted">Phone</th><td>{{ fr.phone_number }}</td></tr>
+          <tr><th class="text-muted">Address</th><td>{{ fr.address }}</td></tr>
+          <tr><th class="text-muted">Coordinates</th><td>{{ fr.latitude }}, {{ fr.longitude }}</td></tr>
+          <tr><th class="text-muted">NTTN</th><td>{{ fr.get_preferred_nttn_display }}</td></tr>
+          <tr><th class="text-muted">Capacity</th><td>{{ fr.requested_capacity }} Mbps</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <form method="post" enctype="multipart/form-data" id="woForm" novalidate>
+      {% csrf_token %}
+      <div class="card mb-3">
+        <div class="card-header fw-semibold">Work Order Details</div>
+        <div class="card-body row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control" value="{{ form.email.value|default:fr.email }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">NID Number <span class="text-danger">*</span></label>
+            <input type="text" name="nid_number" class="form-control" value="{{ form.nid_number.value|default:'' }}" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">NTTN Provider</label>
+            <select name="preferred_nttn" class="form-select">
+              {% for val, label in form.fields.preferred_nttn.choices %}
+              {% if val %}<option value="{{ val }}" {% if form.preferred_nttn.value == val %}selected{% endif %}>{{ label }}</option>{% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Requested Capacity (Mbps)</label>
+            <input type="number" name="requested_capacity" class="form-control" value="{{ form.requested_capacity.value|default:fr.requested_capacity }}" min="1" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Expected Installation Date</label>
+            <input type="date" name="expected_installation_date" class="form-control" value="{{ form.expected_installation_date.value|default:'' }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Work Order Status</label>
+            <select name="onboarding_status" class="form-select">
+              {% for val, label in form.fields.onboarding_status.choices %}
+              {% if val %}<option value="{{ val }}" {% if form.onboarding_status.value == val %}selected{% endif %}>{{ label }}</option>{% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Cheque Image</label>
+            <input type="file" name="cheque_image" class="form-control" accept="image/*,application/pdf">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Installation Notes</label>
+            <textarea name="installation_notes" class="form-control" rows="2">{{ form.installation_notes.value|default:'' }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header fw-semibold d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span>Dynamic Services</span>
+          <div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-success" id="addRow"><i class="fas fa-plus"></i> Add</button>
+            <button type="button" class="btn btn-outline-primary" id="dupRow"><i class="fas fa-copy"></i> Duplicate Last</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead class="table-dark">
+              <tr><th>Service</th><th>Mbps</th><th>Price/Mbps</th><th>Qty</th><th>Line Total</th><th></th></tr>
+            </thead>
+            <tbody id="svcBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Global VAT %</label>
+              <input type="number" step="any" name="wo_vat_percent" id="woVat" class="form-control" value="{{ wo_vat }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Global Discount (BDT)</label>
+              <input type="number" step="any" name="wo_discount" id="woDiscount" class="form-control" value="{{ wo_discount }}">
+            </div>
+          </div>
+          <hr>
+          <div class="row text-center">
+            <div class="col-md-3"><div class="text-muted small">Total Mbps</div><div class="fs-5 fw-bold" id="sumMbps">0</div></div>
+            <div class="col-md-3"><div class="text-muted small">Subtotal</div><div class="fs-5 fw-bold" id="sumSub">BDT 0</div></div>
+            <div class="col-md-3"><div class="text-muted small">VAT</div><div class="fs-5 fw-bold" id="sumVat">BDT 0</div></div>
+            <div class="col-md-3"><div class="text-muted small">Grand Total</div><div class="fs-4 fw-bold text-success" id="sumGrand">BDT 0</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 justify-content-end">
+        <a href="{% if edit_mode %}{% url 'workorders:detail' fr.pk %}{% else %}{% url 'feasibility:detail' fr.pk %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
+        <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>{% if edit_mode %}Update{% else %}Create{% endif %} Work Order</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% include 'workorders/includes/service_rows_js.html' %}
+{% endblock %}

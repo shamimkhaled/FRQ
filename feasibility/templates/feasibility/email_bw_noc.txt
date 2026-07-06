@@ -1,0 +1,33 @@
+KLOUD ISP — BANDWIDTH CONFIRMATION (NOC TEAM)
+==============================================
+
+Customer            : {{ f.customer_name }}
+{% if f.company_name %}Company             : {{ f.company_name }}{% endif %}
+Phone               : {{ f.phone_number }}
+Address             : {{ f.address }}
+Capacity            : {{ f.requested_capacity }} Mbps
+Provider            : {{ f.get_preferred_nttn_display }}
+Distance            : {{ f.fiber_route_distance_km }} km
+Installation Notes  : {% if wo %}{{ wo.installation_notes|default:"—" }}{% else %}—{% endif %}
+
+SELECTED SERVICES (Technical — No Pricing):
+{% for p in services %}  - {{ p.service_type }}: {{ p.capacity_mbps }} Mbps x {{ p.quantity }}
+{% empty %}  No services configured yet.
+{% endfor %}
+
+TECHNICAL REQUIREMENTS:
+  - Fiber route distance: {{ f.fiber_route_distance_km }} km
+  - Nearest POP: {% if f.nearest_pop %}{{ f.nearest_pop.name }} ({{ f.nearest_pop.latitude }}, {{ f.nearest_pop.longitude }}){% else %}N/A{% endif %}
+  - Supported NTTN: {{ f.supported_nttn|join:", " }}
+  - Engineering notes: {{ f.engineering_notes|default:"—" }}
+
+Capacity Confirmations:
+{% for c in confirmations %}  - {{ c.provider }}: {{ c.status }} | {{ c.available_capacity|default:"—" }} Mbps | Ref: {{ c.provider_reference|default:"—" }}
+{% empty %}  No confirmations recorded.
+{% endfor %}
+
+Work Order          : {{ f.work_order_label }} ({{ f.get_onboarding_status_display }})
+
+NOTE: Pricing information intentionally excluded from this notification.
+
+Kloud ISP Automated System
