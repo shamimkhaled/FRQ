@@ -5,16 +5,16 @@
 
 {% block content %}
 <ul class="nav nav-tabs mb-3" id="calcTabs">
-  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#pricingTab">Bandwidth Pricing</button></li>
-  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#macTab">MAC Calculator</button></li>
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#pricingTab">Bandwidth</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#macTab">MAC</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#dcTab">Data Connectivity</button></li>
 </ul>
 
 <div class="tab-content">
-  <!-- Mode 1: Bandwidth Pricing -->
   <div class="tab-pane fade show active" id="pricingTab">
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span class="fw-semibold">Monthly Service Pricing</span>
+        <span class="fw-semibold">Bandwidth — Monthly Service Pricing</span>
         <button type="button" class="btn btn-sm btn-success" id="addPricingRow"><i class="fas fa-plus"></i> Add Service</button>
       </div>
       <div class="table-responsive">
@@ -35,11 +35,10 @@
     </div>
   </div>
 
-  <!-- Mode 2: MAC Calculator -->
   <div class="tab-pane fade" id="macTab">
     <div class="card mb-3">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span class="fw-semibold">Monthly Access Cost (Revenue Split)</span>
+        <span class="fw-semibold">MAC — Monthly Access Cost (Revenue Split)</span>
         <button type="button" class="btn btn-sm btn-success" id="addMacRow"><i class="fas fa-plus"></i> Add Service</button>
       </div>
       <div class="table-responsive">
@@ -69,20 +68,45 @@
       </div>
     </div>
   </div>
+
+  <div class="tab-pane fade" id="dcTab">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Data Connectivity — Monthly Service Pricing</span>
+        <button type="button" class="btn btn-sm btn-success" id="addDcRow"><i class="fas fa-plus"></i> Add Service</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead class="table-dark">
+            <tr><th>Service</th><th>Mbps</th><th>Price</th><th class="text-end">Total</th><th></th></tr>
+          </thead>
+          <tbody id="dcBody"></tbody>
+        </table>
+      </div>
+      <div class="card-body">
+        <div class="row text-center">
+          <div class="col-md-4"><div class="text-muted small">Total Mbps</div><div class="fs-4 fw-bold" id="dcMbps">0</div></div>
+          <div class="col-md-4"><div class="text-muted small">Service Total</div><div class="fs-4 fw-bold" id="dcSub">BDT 0</div></div>
+          <div class="col-md-4"><div class="text-muted small">Grand Total</div><div class="fs-3 fw-bold text-success" id="dcGrand">BDT 0</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+{{ service_types|json_script:"calc-service-types" }}
 <script>
-const SERVICE_TYPES = {{ service_types|safe }};
+const SERVICE_TYPES = JSON.parse(document.getElementById('calc-service-types').textContent);
 const DEFAULT_SERVICES = [
-  {name:'IPT', mbps:100, ppm:200},
+  {name:'IPT', mbps:100, ppm:100},
   {name:'GGC', mbps:50, ppm:100},
-  {name:'CDN', mbps:20, ppm:80},
+  {name:'BDIX', mbps:20, ppm:50},
 ];
 
 function serviceOptions(selected) {
-  return SERVICE_TYPES.map(([v]) => `<option value="${v}" ${v===selected?'selected':''}>${v}</option>`).join('');
+  return SERVICE_TYPES.map(([v,l]) => `<option value="${v}" ${v===selected?'selected':''}>${l}</option>`).join('');
 }
 
 function calcPricing() {
@@ -117,6 +141,20 @@ function calcMac() {
   document.getElementById('macKloud').textContent = 'BDT ' + kloud.toLocaleString();
 }
 
+function calcDc() {
+  let sub = 0, mbps = 0;
+  document.querySelectorAll('#dcBody tr').forEach(row => {
+    const m = parseFloat(row.querySelector('.c-mbps').value) || 0;
+    const p = parseFloat(row.querySelector('.c-ppm').value) || 0;
+    const t = m * p;
+    sub += t; mbps += m;
+    row.querySelector('.c-total').textContent = t.toLocaleString();
+  });
+  document.getElementById('dcMbps').textContent = mbps + ' Mbps';
+  document.getElementById('dcSub').textContent = 'BDT ' + sub.toLocaleString();
+  document.getElementById('dcGrand').textContent = 'BDT ' + sub.toLocaleString();
+}
+
 function addCalcRow(tbodyId, data, onCalc) {
   const tr = document.createElement('tr');
   tr.innerHTML = `
@@ -133,9 +171,9 @@ function addCalcRow(tbodyId, data, onCalc) {
 
 document.getElementById('addPricingRow').addEventListener('click', () => addCalcRow('pricingBody', null, calcPricing));
 document.getElementById('addMacRow').addEventListener('click', () => addCalcRow('macBody', null, calcMac));
+document.getElementById('addDcRow').addEventListener('click', () => addCalcRow('dcBody', null, calcDc));
 document.getElementById('clientSharePct').addEventListener('input', calcMac);
 
 DEFAULT_SERVICES.forEach(d => addCalcRow('pricingBody', d, calcPricing));
-DEFAULT_SERVICES.forEach(d => addCalcRow('macBody', d, calcMac));
 </script>
 {% endblock %}

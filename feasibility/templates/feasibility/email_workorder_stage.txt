@@ -1,0 +1,33 @@
+KLOUD ISP — WORK ORDER WORKFLOW UPDATE
+======================================
+
+Work Order ID       : {{ f.work_order_label }}
+FRQ ID              : {{ f.frq_label }}
+Client              : {{ f.display_name }}
+Company             : {{ f.company_name|default:"—" }}
+Stage               : {{ stage }}
+Action              : {{ action }}
+Actor               : {{ actor }}
+Date                : {{ acted_at|date:"d M Y, H:i" }}
+New Status          : {{ f.get_onboarding_status_display }}
+
+Remarks:
+{{ remarks|default:"—" }}
+
+{% if f.vlan_id or f.scr or f.link_id %}
+Technical Configuration:
+  VLAN ID           : {{ f.vlan_id|default:"—" }}
+  SCR               : {{ f.scr|default:"—" }}
+  Link ID           : {{ f.link_id|default:"—" }}
+  Activation Date   : {{ f.activation_date|date:"d M Y"|default:"—" }}
+{% endif %}
+
+{% if services %}
+Services:
+{% for p in services %}  - {{ p.get_service_type_display }}: {{ p.capacity_mbps }} Mbps @ BDT {{ p.unit_price }}
+{% endfor %}
+{% endif %}
+
+Open the work order in Kloud to review, print, or continue the workflow.
+
+Kloud ISP Automated System

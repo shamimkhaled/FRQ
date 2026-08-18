@@ -1,48 +1,84 @@
 {% extends 'base.html' %}
-{% block title %}{% if edit_mode %}Edit{% else %}New{% endif %} Feasibility Request | Kloud{% endblock %}
-{% block page_title %}{% if edit_mode %}Edit Feasibility #{{ fr.pk }}{% else %}New Feasibility Request{% endif %}{% endblock %}
+{% block title %}{% if edit_mode %}Edit{% else %}New{% endif %} FRQ | Kloud{% endblock %}
+{% block page_title %}{% if edit_mode %}Edit {{ fr.frq_label }}{% else %}New Feasibility Request{% endif %}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-lg-8">
+  <div class="col-lg-9">
     <div class="card">
       <div class="card-header {% if edit_mode %}bg-warning text-dark{% else %}bg-primary text-white{% endif %}">
-        <i class="fas fa-{% if edit_mode %}edit{% else %}map-marker-alt{% endif %} me-2"></i>
-        {% if edit_mode %}Edit Feasibility Request{% else %}Submit Feasibility Request{% endif %}
+        <i class="fas fa-{% if edit_mode %}edit{% else %}file-alt{% endif %} me-2"></i>
+        {% if edit_mode %}Edit Feasibility Request{% else %}Submit Feasibility Request (FRQ){% endif %}
       </div>
       <div class="card-body">
-        <form method="post" novalidate>
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <form method="post" novalidate id="frq-form">
           {% csrf_token %}
 
-          <div class="section-title">Customer Information</div>
+          <div class="section-title">Client Information</div>
           <div class="row g-3 mb-4">
             <div class="col-md-6">
-              <label class="form-label">Customer Name <span class="text-danger">*</span></label>
-              <input type="text" name="customer_name" class="form-control {% if form.customer_name.errors %}is-invalid{% endif %}" value="{{ form.customer_name.value|default:'' }}">
-              {% for e in form.customer_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              <label class="form-label">Contact Person <span class="text-danger">*</span></label>
+              {{ form.contact_person }}
+              {% for e in form.contact_person.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
             </div>
             <div class="col-md-6">
+              <label class="form-label">Email <span class="text-danger">*</span></label>
+              {{ form.email }}
+              {% for e in form.email.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Customer Type <span class="text-danger">*</span></label>
+              {{ form.customer_type }}
+            </div>
+            <div class="col-md-4">
               <label class="form-label">Proprietor Name</label>
-              <input type="text" name="proprietor_name" class="form-control" value="{{ form.proprietor_name.value|default:'' }}">
+              {{ form.proprietor_name }}
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
               <label class="form-label">Company Name</label>
-              <input type="text" name="company_name" class="form-control" value="{{ form.company_name.value|default:'' }}" placeholder="Optional">
+              {{ form.company_name }}
             </div>
             <div class="col-md-6">
               <label class="form-label">Phone Number <span class="text-danger">*</span></label>
-              <input type="text" name="phone_number" class="form-control {% if form.phone_number.errors %}is-invalid{% endif %}" value="{{ form.phone_number.value|default:'' }}">
-              {% for e in form.phone_number.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              {{ form.phone_number }}
+              {% for e in form.phone_number.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
             </div>
             <div class="col-md-6">
               <label class="form-label">Requested Capacity (Mbps) <span class="text-danger">*</span></label>
-              <input type="number" name="requested_capacity" class="form-control {% if form.requested_capacity.errors %}is-invalid{% endif %}" value="{{ form.requested_capacity.value|default:'' }}" placeholder="e.g. 100">
-              {% for e in form.requested_capacity.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              {{ form.requested_capacity }}
+              {% for e in form.requested_capacity.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
             </div>
             <div class="col-12">
-              <label class="form-label">Address <span class="text-danger">*</span></label>
-              <textarea name="address" rows="2" class="form-control {% if form.address.errors %}is-invalid{% endif %}">{{ form.address.value|default:'' }}</textarea>
-              {% for e in form.address.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              <label class="form-label">Remarks</label>
+              {{ form.remarks }}
+            </div>
+          </div>
+
+          <div class="section-title">Address — Geographic Selection</div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label">Division <span class="text-danger">*</span></label>
+              {{ form.division }}
+              {% for e in form.division.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">District (Zilla) <span class="text-danger">*</span></label>
+              {{ form.district }}
+              {% for e in form.district.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Upazila / Thana <span class="text-danger">*</span></label>
+              {{ form.upazila }}
+              {% for e in form.upazila.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Street / Area Address <span class="text-danger">*</span></label>
+              {{ form.address }}
+              {% for e in form.address.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
             </div>
           </div>
 
@@ -50,40 +86,15 @@
           <div class="row g-3 mb-4">
             <div class="col-md-6">
               <label class="form-label">Latitude <span class="text-danger">*</span></label>
-              <input type="number" step="any" name="latitude" class="form-control {% if form.latitude.errors %}is-invalid{% endif %}" value="{{ form.latitude.value|default:'' }}" placeholder="e.g. 23.8103">
-              {% for e in form.latitude.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              {{ form.latitude }}
+              {% for e in form.latitude.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
               <small class="text-muted">Must be between -90 and +90</small>
             </div>
             <div class="col-md-6">
               <label class="form-label">Longitude <span class="text-danger">*</span></label>
-              <input type="number" step="any" name="longitude" class="form-control {% if form.longitude.errors %}is-invalid{% endif %}" value="{{ form.longitude.value|default:'' }}" placeholder="e.g. 90.4125">
-              {% for e in form.longitude.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              {{ form.longitude }}
+              {% for e in form.longitude.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
               <small class="text-muted">Must be between -180 and +180</small>
-            </div>
-          </div>
-
-          <div class="section-title">NTTN Provider</div>
-          <div class="row g-3 mb-4">
-            <div class="col-md-6">
-              <label class="form-label">Preferred NTTN <span class="text-danger">*</span></label>
-              <select name="preferred_nttn" class="form-select {% if form.preferred_nttn.errors %}is-invalid{% endif %}">
-                <option value="">-- Select --</option>
-                <option value="SCL" {% if form.preferred_nttn.value == 'SCL' %}selected{% endif %}>SCL</option>
-                <option value="fiber_home" {% if form.preferred_nttn.value == 'fiber_home' %}selected{% endif %}>Fiber@Home</option>
-                <option value="bahon" {% if form.preferred_nttn.value == 'bahon' %}selected{% endif %}>Bahon</option>
-                <option value="level3" {% if form.preferred_nttn.value == 'level3' %}selected{% endif %}>Level3</option>
-              </select>
-              {% for e in form.preferred_nttn.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Supported NTTN Providers <span class="text-danger">*</span></label>
-              {% for choice in form.supported_nttn %}
-              <div class="form-check">
-                {{ choice.tag }}
-                <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
-              </div>
-              {% endfor %}
-              {% for e in form.supported_nttn.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
             </div>
           </div>
 
@@ -91,7 +102,7 @@
             <a href="{% if edit_mode %}{% url 'feasibility:detail' fr.pk %}{% else %}{% url 'feasibility:dashboard' %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
             <button type="submit" class="btn {% if edit_mode %}btn-warning{% else %}btn-primary{% endif %}">
               <i class="fas fa-{% if edit_mode %}save{% else %}paper-plane{% endif %} me-1"></i>
-              {% if edit_mode %}Save Changes{% else %}Submit Request{% endif %}
+              {% if edit_mode %}Save Changes{% else %}Submit FRQ{% endif %}
             </button>
           </div>
         </form>
@@ -99,4 +110,68 @@
     </div>
   </div>
 </div>
+
+<script>
+(function() {
+  const divisionEl = document.getElementById('id_division');
+  const districtEl = document.getElementById('id_district');
+  const upazilaEl = document.getElementById('id_upazila');
+  if (!divisionEl || !districtEl || !upazilaEl) return;
+
+  const districtsUrl = '{% url "feasibility:geo_districts" %}';
+  const upazilasUrl = '{% url "feasibility:geo_upazilas" %}';
+  const initialDistrict = '{{ form.district.value|default:"" }}';
+  const initialUpazila = '{{ form.upazila.value|default:"" }}';
+
+  function clearSelect(el, placeholder) {
+    el.innerHTML = '';
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = placeholder;
+    el.appendChild(opt);
+  }
+
+  async function loadDistricts(divisionId, selectedId) {
+    clearSelect(districtEl, '-- Select District --');
+    clearSelect(upazilaEl, '-- Select Upazila / Thana --');
+    if (!divisionId) return;
+    const res = await fetch(districtsUrl + '?division_id=' + divisionId);
+    const items = await res.json();
+    items.forEach(function(item) {
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = item.name;
+      if (String(item.id) === String(selectedId)) opt.selected = true;
+      districtEl.appendChild(opt);
+    });
+    if (selectedId) loadUpazilas(selectedId, initialUpazila);
+  }
+
+  async function loadUpazilas(districtId, selectedId) {
+    clearSelect(upazilaEl, '-- Select Upazila / Thana --');
+    if (!districtId) return;
+    const res = await fetch(upazilasUrl + '?district_id=' + districtId);
+    const items = await res.json();
+    items.forEach(function(item) {
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = item.name;
+      if (String(item.id) === String(selectedId)) opt.selected = true;
+      upazilaEl.appendChild(opt);
+    });
+  }
+
+  divisionEl.addEventListener('change', function() {
+    loadDistricts(this.value, null);
+  });
+
+  districtEl.addEventListener('change', function() {
+    loadUpazilas(this.value, null);
+  });
+
+  if (divisionEl.value) {
+    loadDistricts(divisionEl.value, initialDistrict);
+  }
+})();
+</script>
 {% endblock %}

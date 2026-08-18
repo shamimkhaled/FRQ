@@ -1,22 +1,31 @@
 {% extends 'base.html' %}
-{% block title %}{{ fr.customer_name }} | Kloud{% endblock %}
-{% block page_title %}Feasibility Request #{{ fr.pk }}{% endblock %}
+{% block title %}{{ fr.display_name }} | Kloud{% endblock %}
+{% block page_title %}{{ fr.frq_label }} — {{ fr.display_name }}{% endblock %}
 
 {% block content %}
 <div class="d-flex gap-2 mb-3 flex-wrap">
   <a href="{% url 'feasibility:dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Back</a>
+  {% if can_edit_frq %}
   <a href="{% url 'feasibility:edit' fr.pk %}" class="btn btn-warning btn-sm"><i class="fas fa-edit me-1"></i>Edit</a>
+  {% endif %}
+  {% if can_review_frq %}
   <a href="{% url 'feasibility:review' fr.pk %}" class="btn btn-outline-warning btn-sm"><i class="fas fa-clipboard-check me-1"></i>Review</a>
+  {% endif %}
+  {% if can_nttn %}
+  <a href="{% url 'feasibility:provider_comparison' fr.pk %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-balance-scale me-1"></i>Compare Providers</a>
+  {% endif %}
   <a href="{% url 'feasibility:client_report' fr.pk %}" class="btn btn-success btn-sm"><i class="fas fa-file me-1"></i>Client Report</a>
+  {% if can_review_frq %}
   <a href="{% url 'feasibility:internal_report' fr.pk %}" class="btn btn-info btn-sm text-white"><i class="fas fa-file-alt me-1"></i>Internal Report</a>
-  {% if fr.can_create_work_order %}
+  {% endif %}
+  {% if can_create_wo %}
   <a href="{% url 'workorders:create' fr.pk %}" class="btn btn-success btn-sm"><i class="fas fa-file-circle-plus me-1"></i>Create Work Order</a>
   {% elif fr.is_onboarded %}
   <a href="{% url 'workorders:detail' fr.pk %}" class="btn btn-dark btn-sm"><i class="fas fa-file-contract me-1"></i>{{ fr.work_order_label }}</a>
   {% endif %}
 </div>
 
-{% if fr.can_create_work_order %}
+{% if can_create_wo %}
 <div class="alert alert-success d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
   <div>
     <i class="fas fa-file-circle-plus me-2"></i>
@@ -38,17 +47,73 @@
   <i class="fas fa-satellite-dish me-1"></i> <strong>Coverage Assessment:</strong> {{ coverage_message }}
 </div>
 
+{% if fr.nttn_review_entries.exists %}
+<div class="card mb-3">
+  <div class="card-header fw-semibold"><i class="fas fa-network-wired me-2 text-success"></i>NTTN Review Summary</div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead class="table-light"><tr><th>NTTN</th><th>Coordinates</th><th>Distance</th><th>Maps</th><th>Notes</th></tr></thead>
+      <tbody>
+        {% for entry in fr.nttn_review_entries.all %}
+        <tr>
+          <td>{{ entry.provider_label }}</td>
+          <td class="small">{{ entry.pop_latitude|default:"—" }}, {{ entry.pop_longitude|default:"—" }}</td>
+          <td>{% if entry.straight_distance_km %}{{ entry.straight_distance_km }} km{% else %}—{% endif %}</td>
+          <td>{% if entry.maps_url %}<a href="{{ entry.maps_url }}" target="_blank" class="btn btn-sm btn-outline-primary py-0">Directions</a>{% else %}—{% endif %}</td>
+          <td class="small">{{ entry.notes|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if fr.nttn_responses.exists %}
+<div class="card mb-3">
+  <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+    <span><i class="fas fa-balance-scale me-2 text-primary"></i>NTTN Provider Responses ({{ fr.nttn_responses.count }})</span>
+    <a href="{% url 'feasibility:provider_comparison' fr.pk %}" class="btn btn-primary btn-sm">View Comparison</a>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead class="table-light"><tr><th>Provider</th><th>Status</th><th>Route</th><th>Capacity</th><th>Cost</th><th></th></tr></thead>
+      <tbody>
+        {% for resp in fr.nttn_responses.all %}
+        <tr class="{% if resp.is_recommended %}table-success{% endif %}">
+          <td>{{ resp.provider.name }}{% if resp.is_recommended %} <i class="fas fa-trophy text-success" title="Recommended"></i>{% endif %}</td>
+          <td><span class="badge badge-status-{{ resp.status }} rounded-pill" style="font-size:10px;">{{ resp.get_status_display }}</span></td>
+          <td>{{ resp.fiber_route_distance_km|default:"—" }} km</td>
+          <td>{{ resp.available_capacity|default:"—" }} Mbps</td>
+          <td>{% if resp.total_estimated_cost %}BDT {{ resp.total_estimated_cost|floatformat:0 }}{% else %}—{% endif %}</td>
+          <td><a href="{% url 'feasibility:provider_response_add' fr.pk resp.provider.pk %}" class="btn btn-outline-primary btn-sm py-0">Edit</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 <div class="row g-3">
   <div class="col-md-6">
     <div class="card h-100">
       <div class="card-header fw-semibold"><i class="fas fa-user me-2 text-primary"></i>Customer Information</div>
       <div class="card-body">
         <table class="table table-sm table-borderless mb-0">
-          <tr><th class="text-muted small" width="40%">Customer Name</th><td>{{ fr.customer_name }}</td></tr>
+          <tr><th class="text-muted small" width="40%">FRQ ID</th><td><strong>{{ fr.frq_label }}</strong></td></tr>
+          <tr><th class="text-muted small">Contact Person</th><td>{{ fr.display_name }}</td></tr>
+          <tr><th class="text-muted small">Email</th><td>{{ fr.email|default:"—" }}</td></tr>
+          <tr><th class="text-muted small">Customer Type</th><td>{{ fr.get_customer_type_display }}</td></tr>
           <tr><th class="text-muted small">Proprietor</th><td>{{ fr.proprietor_name|default:"—" }}</td></tr>
           <tr><th class="text-muted small">Company</th><td>{{ fr.company_name|default:"—" }}</td></tr>
           <tr><th class="text-muted small">Phone</th><td>{{ fr.phone_number }}</td></tr>
           <tr><th class="text-muted small">Address</th><td>{{ fr.address }}</td></tr>
+          {% if fr.division %}
+          <tr><th class="text-muted small">Division</th><td>{{ fr.division.name }}</td></tr>
+          <tr><th class="text-muted small">District</th><td>{{ fr.district.name|default:"—" }}</td></tr>
+          <tr><th class="text-muted small">Upazila</th><td>{{ fr.upazila.name|default:"—" }}</td></tr>
+          {% endif %}
           <tr><th class="text-muted small">Submitted By</th><td>{{ fr.submitted_by.get_full_name|default:fr.submitted_by.username }}</td></tr>
           <tr><th class="text-muted small">Date</th><td>{{ fr.created_at|date:"d M Y, H:i" }}</td></tr>
         </table>
@@ -64,7 +129,7 @@
           <tr><th class="text-muted small" width="40%">Latitude</th><td>{{ fr.latitude }}</td></tr>
           <tr><th class="text-muted small">Longitude</th><td>{{ fr.longitude }}</td></tr>
           <tr><th class="text-muted small">Requested Capacity</th><td><strong>{{ fr.requested_capacity }} Mbps</strong></td></tr>
-          <tr><th class="text-muted small">Preferred NTTN</th><td>{{ fr.get_preferred_nttn_display|default:"—" }}</td></tr>
+          <tr><th class="text-muted small">Preferred NTTN</th><td>{{ fr.preferred_nttn_label }}</td></tr>
           <tr><th class="text-muted small">Supported NTTN</th><td>{{ fr.supported_nttn|join:", " }}</td></tr>
           <tr><th class="text-muted small">Status</th>
             <td><span class="badge badge-status-{{ fr.status }} rounded-pill px-3 py-2">{{ fr.get_status_display }}</span></td>
@@ -115,9 +180,16 @@
 
   <div class="col-12">
     <div class="card">
-      <div class="card-header fw-semibold"><i class="fas fa-map me-2 text-primary"></i>Location Map</div>
+      <div class="card-header fw-semibold">
+        <i class="fas fa-map me-2 text-primary"></i>
+        {% if has_provider_map %}NTTN Distance Comparison Map{% else %}Location Map{% endif %}
+      </div>
       <div class="card-body">
-        {% include 'feasibility/includes/feasibility_map.html' with map_height='350' %}
+        {% if has_provider_map %}
+          {% include 'feasibility/includes/provider_comparison_map.html' with map_height='400' %}
+        {% else %}
+          {% include 'feasibility/includes/feasibility_map.html' with map_height='350' %}
+        {% endif %}
       </div>
     </div>
   </div>

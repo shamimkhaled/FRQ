@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load rbac_tags %}
+
+{% block title %}Audit Log — Kloud ISP{% endblock %}
+{% block page_title %}Audit Log{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small">Module</label>
+        <select name="module" class="form-select form-select-sm">
+          <option value="">All modules</option>
+          {% for m in modules %}
+          <option value="{{ m }}" {% if module_filter == m %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Action</label>
+        <select name="action" class="form-select form-select-sm">
+          <option value="">All actions</option>
+          {% for a in actions %}
+          <option value="{{ a }}" {% if action_filter == a %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small">Search</label>
+        <input type="text" name="search" class="form-control form-control-sm" value="{{ search }}" placeholder="Record ID, user, message…">
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Time</th>
+            <th>User</th>
+            <th>Role</th>
+            <th>Action</th>
+            <th>Module</th>
+            <th>Record</th>
+            <th>Field</th>
+            <th>Change</th>
+            <th>IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in page %}
+          <tr>
+            <td class="small text-nowrap">{{ log.created_at|date:"Y-m-d H:i" }}</td>
+            <td class="small">{{ log.user.username|default:"—" }}</td>
+            <td class="small">{{ log.role_name|default:"—" }}</td>
+            <td><span class="badge bg-secondary">{{ log.action }}</span></td>
+            <td class="small">{{ log.module }}</td>
+            <td class="small">{{ log.record_type }} #{{ log.record_id }}</td>
+            <td class="small">{{ log.field_name|default:"—" }}</td>
+            <td class="small">
+              {% if log.field_name %}
+              <span class="text-muted">{{ log.old_value|truncatechars:30 }}</span>
+              → <span>{{ log.new_value|truncatechars:30 }}</span>
+              {% else %}
+              {{ log.message|truncatechars:60 }}
+              {% endif %}
+            </td>
+            <td class="small">{{ log.ip_address|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="text-center text-muted py-4">No audit entries found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% if page.has_other_pages %}
+  <div class="card-footer d-flex justify-content-between align-items-center">
+    <span class="small text-muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    <nav>
+      {% if page.has_previous %}
+      <a class="btn btn-sm btn-outline-secondary" href="?page={{ page.previous_page_number }}&module={{ module_filter }}&action={{ action_filter }}&search={{ search }}">Previous</a>
+      {% endif %}
+      {% if page.has_next %}
+      <a class="btn btn-sm btn-outline-secondary ms-1" href="?page={{ page.next_page_number }}&module={{ module_filter }}&action={{ action_filter }}&search={{ search }}">Next</a>
+      {% endif %}
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

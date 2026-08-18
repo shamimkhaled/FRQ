@@ -12,8 +12,7 @@ urlpatterns = [
     path('<int:pk>/delete/', views.delete_work_order, name='delete'),
     path('<int:pk>/print/', views.print_work_order, name='print'),
     path('<int:pk>/status/', views.update_status, name='update_status'),
+    path('<int:pk>/stage/', views.wo_stage_action, name='stage_action'),
     path('<int:pk>/notify/', views.send_notifications, name='send_notifications'),
-    path('<int:pk>/bandwidth/', views.bandwidth_edit, name='bandwidth_add'),
-    path('<int:pk>/bandwidth/<str:provider>/', views.bandwidth_edit, name='bandwidth_edit'),
-    path('<int:pk>/bandwidth/<str:provider>/delete/', views.bandwidth_delete, name='bandwidth_delete'),
+    path('<int:pk>/attachments/<int:doc_pk>/', views.attachment_download, name='attachment_download'),
 ]

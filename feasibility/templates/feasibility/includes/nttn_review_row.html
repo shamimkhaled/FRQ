@@ -1,0 +1,52 @@
+<div class="nttn-review-row border rounded p-3 mb-3 bg-light" data-index="{{ index }}">
+  {% if entry %}<input type="hidden" name="nttn_{{ index }}_id" value="{{ entry.pk }}">{% endif %}
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <strong class="text-success"><i class="fas fa-broadcast-tower me-1"></i>NTTN Entry #{{ index|add:1 }}</strong>
+    <button type="button" class="btn btn-outline-danger btn-sm nttn-remove"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="row g-3 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label small fw-semibold">NTTN Provider</label>
+      <select name="nttn_{{ index }}_provider" class="form-select form-select-sm nttn-provider-select" required>
+        <option value="">-- Select --</option>
+        {% for p in nttn_providers %}
+        <option value="{{ p.pk }}" data-code="{{ p.code }}"
+          {% if entry and entry.provider_id == p.pk %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3 nttn-other-wrap" style="{% if not entry or entry.provider.code != 'others' %}display:none;{% endif %}">
+      <label class="form-label small fw-semibold">Other Name</label>
+      <input type="text" name="nttn_{{ index }}_other" class="form-control form-control-sm nttn-other-input"
+             value="{% if entry %}{{ entry.provider_other_name }}{% endif %}" placeholder="Provider name">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-semibold">Latitude</label>
+      <input type="number" step="any" name="nttn_{{ index }}_latitude" class="form-control form-control-sm nttn-lat"
+             value="{% if entry.pop_latitude %}{{ entry.pop_latitude }}{% endif %}" placeholder="POP lat">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-semibold">Longitude</label>
+      <input type="number" step="any" name="nttn_{{ index }}_longitude" class="form-control form-control-sm nttn-lng"
+             value="{% if entry.pop_longitude %}{{ entry.pop_longitude }}{% endif %}" placeholder="POP lng">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-semibold">Distance</label>
+      <div class="form-control form-control-sm bg-white nttn-distance fw-bold text-primary">
+        {% if entry and entry.straight_distance_km %}{{ entry.straight_distance_km }} km{% else %}—{% endif %}
+      </div>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-semibold">Maps</label>
+      <a href="{% if entry and entry.maps_url %}{{ entry.maps_url }}{% else %}#{% endif %}" target="_blank"
+         class="btn btn-sm btn-outline-primary w-100 nttn-maps-link {% if not entry or not entry.maps_url %}disabled{% endif %}">
+        <i class="fas fa-route"></i> Directions
+      </a>
+    </div>
+    <div class="col-12">
+      <label class="form-label small fw-semibold">Notes</label>
+      <input type="text" name="nttn_{{ index }}_notes" class="form-control form-control-sm"
+             value="{% if entry %}{{ entry.notes }}{% endif %}" placeholder="Optional notes">
+    </div>
+  </div>
+</div>

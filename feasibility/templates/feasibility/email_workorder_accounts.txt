@@ -1,0 +1,60 @@
+KLOUD ISP — WORK ORDER REPORT (Accounts)
+========================================
+
+Work Order ID       : {{ f.work_order_label }}
+FRQ ID              : {{ f.frq_label }}
+Status              : {{ f.get_onboarding_status_display }}
+Submitted By        : {{ submitted_by|default:"—" }}
+Submitted On        : {{ submitted_at|date:"d M Y, H:i" }}
+
+--- CLIENT INFORMATION ---
+Contact Person      : {{ f.display_name }}
+Company             : {{ f.company_name|default:"—" }}
+Email               : {{ f.email|default:"—" }}
+Phone               : {{ f.phone_number }}
+Customer Type       : {{ f.get_customer_type_display }}
+NID Number          : {{ f.nid_number }}
+Address             : {{ f.address }}
+{% if f.division %}Division / District : {{ f.division }} / {{ f.district }} / {{ f.upazila }}{% endif %}
+
+--- SERVICE INFORMATION ---
+Customer Category   : {{ f.get_customer_category_display|default:"—" }}
+SFP Wavelength      : {{ f.get_sfp_wavelength_display|default:"—" }}
+Billing Date        : {{ f.billing_date|date:"d M Y"|default:"—" }}
+Upstream Provider   : {{ f.upstream_provider_label }}
+Preferred NTTN      : {{ f.preferred_nttn_label }}
+Requested Capacity  : {{ f.requested_capacity }} Mbps
+Expected Install    : {{ f.expected_installation_date|date:"d M Y"|default:"—" }}
+
+--- SERVICES ---
+{% for p in services %}
+Service             : {{ p.get_service_type_display }}
+Capacity            : {{ p.capacity_mbps }} Mbps
+Price / Mbps        : BDT {{ p.unit_price }}
+Qty                 : {{ p.quantity }}
+Monthly             : BDT {{ p.total_monthly_charge }}
+---
+{% empty %}
+No services configured.
+{% endfor %}
+
+{% if pricing_summary %}
+Subtotal            : BDT {{ pricing_summary.subtotal_monthly|floatformat:2 }}
+VAT                 : BDT {{ pricing_summary.vat_total|floatformat:2 }}
+Discount            : BDT {{ pricing_summary.discount_total|floatformat:2 }}
+Grand Total         : BDT {{ pricing_summary.grand_total|floatformat:2 }}
+{% if f.customer_category == 'MAC' %}Client Share %      : {{ f.wo_client_share_percent }}%  (BDT {{ pricing_summary.mac_client_share|floatformat:2 }})
+Kloud Share %       : {{ f.wo_kloud_share_percent }}%  (BDT {{ pricing_summary.mac_kloud_share|floatformat:2 }})
+{% endif %}
+{% endif %}
+
+Documents:
+{% for doc in f.documents.all %}
+  {{ doc.get_doc_type_display }} : Attached
+{% empty %}
+  None uploaded
+{% endfor %}
+
+Print/PDF: Open the work order print page and use Print → Save as PDF.
+
+Kloud ISP Automated System

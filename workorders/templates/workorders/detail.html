@@ -1,14 +1,40 @@
 {% extends 'base.html' %}
 {% block title %}{{ fr.work_order_label }} | Kloud{% endblock %}
-{% block page_title %}{{ fr.work_order_label }} — {{ fr.customer_name }}{% endblock %}
+{% block page_title %}{{ fr.work_order_label }} — {{ fr.display_name }}{% endblock %}
 {% block nav_workorders %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+.wo-stepper { display:flex; gap:6px; flex-wrap:wrap; }
+.wo-step { flex:1; min-width:110px; text-align:center; padding:8px 6px; border-radius:8px; font-size:12px; background:#eceff1; color:#607d8b; }
+.wo-step.done { background:#e8f5e9; color:#2e7d32; }
+.wo-step.current { background:#e3f2fd; color:#1565c0; font-weight:700; }
+.wo-step.correction { background:#fff8e1; color:#f57f17; }
+.wo-step.rejected { background:#fce4ec; color:#c62828; }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="d-flex gap-2 mb-3 flex-wrap no-print">
   <a href="{% url 'workorders:list' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left"></i> Work Orders</a>
   <a href="{% url 'feasibility:detail' fr.pk %}" class="btn btn-outline-info btn-sm">Feasibility</a>
+  {% if can_edit_wo %}
   <a href="{% url 'workorders:edit' fr.pk %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Edit</a>
+  {% endif %}
   <a href="{% url 'workorders:print' fr.pk %}" class="btn btn-secondary btn-sm" target="_blank"><i class="fas fa-print"></i> Print / PDF</a>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body py-3">
+    <div class="wo-stepper">
+      {% for step in workflow_steps %}
+      <div class="wo-step {{ step.state }}">{{ step.label }}</div>
+      {% endfor %}
+    </div>
+    {% if fr.onboarding_remarks %}
+    <div class="alert alert-light border mt-3 mb-0 small"><strong>Latest remarks:</strong> {{ fr.onboarding_remarks }}</div>
+    {% endif %}
+  </div>
 </div>
 
 <div class="row g-3">
@@ -17,45 +43,69 @@
       <div class="card-header fw-semibold">Work Order Details</div>
       <div class="card-body p-0">
         <table class="table table-bordered mb-0">
-          <tr><th class="bg-light" width="30%">Customer</th><td>{{ fr.customer_name }}</td></tr>
+          <tr><th class="bg-light" width="30%">Work Order ID</th><td class="fw-semibold">{{ fr.work_order_label }}</td></tr>
+          <tr><th class="bg-light">FRQ ID</th><td><a href="{% url 'feasibility:detail' fr.pk %}">{{ fr.frq_label }}</a></td></tr>
+          <tr><th class="bg-light">Contact Person</th><td>{{ fr.display_name }}</td></tr>
           <tr><th class="bg-light">Company</th><td>{{ fr.company_name|default:"—" }}</td></tr>
-          <tr><th class="bg-light">Contact / Phone</th><td>{{ fr.proprietor_name|default:"—" }} / {{ fr.phone_number }}</td></tr>
+          <tr><th class="bg-light">Phone</th><td>{{ fr.phone_number }}</td></tr>
           <tr><th class="bg-light">Email</th><td>{{ fr.email|default:"—" }}</td></tr>
           <tr><th class="bg-light">Address</th><td>{{ fr.address }}</td></tr>
-          <tr><th class="bg-light">Coordinates</th><td>{{ fr.latitude }}, {{ fr.longitude }}</td></tr>
+          {% if fr.division %}<tr><th class="bg-light">Location</th><td>{{ fr.division }} / {{ fr.district }} / {{ fr.upazila }}</td></tr>{% endif %}
           <tr><th class="bg-light">NID</th><td>{{ fr.nid_number }}</td></tr>
-          <tr><th class="bg-light">NTTN / Capacity</th><td>{{ fr.get_preferred_nttn_display }} — {{ fr.requested_capacity }} Mbps</td></tr>
+          <tr><th class="bg-light">Customer Category</th><td>{{ fr.get_customer_category_display|default:"—" }}</td></tr>
+          <tr><th class="bg-light">SFP Wavelength</th><td>{{ fr.get_sfp_wavelength_display|default:"—" }}</td></tr>
+          <tr><th class="bg-light">Billing Date</th><td>{{ fr.billing_date|date:"d M Y"|default:"—" }}</td></tr>
+          <tr><th class="bg-light">Upstream Provider</th><td>{{ fr.upstream_provider_label }}</td></tr>
+          <tr><th class="bg-light">Preferred NTTN / Capacity</th><td>{{ fr.preferred_nttn_label }} — {{ fr.requested_capacity }} Mbps</td></tr>
           <tr><th class="bg-light">Expected Installation</th><td>{{ fr.expected_installation_date|date:"d M Y"|default:"—" }}</td></tr>
+          <tr><th class="bg-light">VLAN / SCR / Link</th><td>{{ fr.vlan_id|default:"—" }} / {{ fr.scr|default:"—" }} / {{ fr.link_id|default:"—" }}</td></tr>
+          <tr><th class="bg-light">Activation Date</th><td>{{ fr.activation_date|date:"d M Y"|default:"—" }}</td></tr>
           <tr><th class="bg-light">Installation Notes</th><td>{{ fr.installation_notes|default:"—" }}</td></tr>
-          {% if fr.cheque_image %}<tr><th class="bg-light">Cheque</th><td><a href="{{ fr.cheque_image.url }}" target="_blank">View document</a></td></tr>{% endif %}
+          <tr><th class="bg-light">Documents</th><td>
+            {% for doc in fr.documents.all %}
+            <a href="{% url 'workorders:attachment_download' fr.pk doc.pk %}" class="me-2">{{ doc.get_doc_type_display }}</a>
+            {% empty %}—{% endfor %}
+          </td></tr>
         </table>
       </div>
     </div>
 
     <div class="card mb-3">
-      <div class="card-header fw-semibold">Services ({{ services|length }})</div>
+      <div class="card-header fw-semibold">Services ({{ services|length }}){% if fr.customer_category %} — {{ fr.get_customer_category_display }}{% endif %}</div>
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover mb-0">
-            <thead class="table-dark"><tr><th>Service</th><th>Mbps</th><th>Unit Price</th><th>Qty</th><th>Monthly</th></tr></thead>
+            <thead class="table-dark">
+              <tr>
+                {% if fr.customer_category != 'DC' %}<th>Service</th>{% endif %}
+                <th>{% if fr.customer_category == 'DC' %}Capacity{% else %}Mbps{% endif %}</th>
+                <th>Price</th>
+                {% if fr.customer_category != 'DC' %}<th>Qty</th>{% endif %}
+                <th>Monthly</th>
+              </tr>
+            </thead>
             <tbody>
               {% for s in services %}
               <tr>
-                <td><span class="badge bg-primary">{{ s.service_type }}</span></td>
+                {% if fr.customer_category != 'DC' %}<td><span class="badge bg-primary">{{ s.get_service_type_display }}</span></td>{% endif %}
                 <td>{{ s.capacity_mbps }}</td>
                 <td>BDT {{ s.unit_price|floatformat:2 }}</td>
-                <td>{{ s.quantity }}</td>
+                {% if fr.customer_category != 'DC' %}<td>{{ s.quantity }}</td>{% endif %}
                 <td class="fw-semibold">BDT {{ s.total_monthly_charge|floatformat:2 }}</td>
               </tr>
-              {% empty %}<tr><td colspan="5" class="text-center text-muted py-3">No services configured.</td></tr>{% endfor %}
+              {% empty %}<tr><td colspan="6" class="text-center text-muted py-3">No services configured.</td></tr>{% endfor %}
             </tbody>
             {% if summary %}
             <tfoot class="table-light">
-              <tr><th colspan="3" class="text-end">Total Mbps</th><th colspan="2">{{ summary.total_mbps }} Mbps</th></tr>
-              <tr><th colspan="3" class="text-end">Subtotal</th><th colspan="2">BDT {{ summary.subtotal_monthly|floatformat:2 }}</th></tr>
-              <tr><th colspan="3" class="text-end">VAT</th><th colspan="2">BDT {{ summary.vat_total|floatformat:2 }}</th></tr>
-              <tr><th colspan="3" class="text-end">Discount</th><th colspan="2">BDT {{ summary.discount_total|floatformat:2 }}</th></tr>
-              <tr><th colspan="3" class="text-end">Grand Total</th><th colspan="2" class="text-success fw-bold">BDT {{ summary.grand_total|floatformat:2 }}</th></tr>
+              <tr><th colspan="4" class="text-end">Total Mbps</th><th colspan="2">{{ summary.total_mbps }} Mbps</th></tr>
+              <tr><th colspan="4" class="text-end">Subtotal</th><th colspan="2">BDT {{ summary.subtotal_monthly|floatformat:2 }}</th></tr>
+              <tr><th colspan="4" class="text-end">VAT</th><th colspan="2">BDT {{ summary.vat_total|floatformat:2 }}</th></tr>
+              <tr><th colspan="4" class="text-end">Discount</th><th colspan="2">BDT {{ summary.discount_total|floatformat:2 }}</th></tr>
+              {% if fr.customer_category == 'MAC' %}
+              <tr><th colspan="4" class="text-end">Client Share ({{ fr.wo_client_share_percent }}%)</th><th colspan="2">BDT {{ summary.mac_client_share|floatformat:2 }}</th></tr>
+              <tr><th colspan="4" class="text-end">Kloud Share ({{ fr.wo_kloud_share_percent }}%)</th><th colspan="2">BDT {{ summary.mac_kloud_share|floatformat:2 }}</th></tr>
+              {% endif %}
+              <tr><th colspan="4" class="text-end">Grand Total</th><th colspan="2" class="text-success fw-bold">BDT {{ summary.grand_total|floatformat:2 }}</th></tr>
             </tfoot>
             {% endif %}
           </table>
@@ -63,56 +113,92 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-header fw-semibold d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <span>Bandwidth Confirmation</span>
-        <a href="{% url 'workorders:bandwidth_add' fr.pk %}" class="btn btn-sm btn-primary">Add / Edit Provider</a>
-      </div>
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">Review History</div>
       <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table mb-0 align-middle">
-            <thead class="table-dark">
-              <tr>
-                <th>Provider</th><th>Requested</th><th>Approved</th><th>Available</th>
-                <th>Status</th><th>Ref #</th><th>Date</th><th class="no-print"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for c in confirmations %}
-              <tr>
-                <td class="fw-semibold">{{ c.provider }}</td>
-                <td>{{ c.requested_capacity }} Mbps</td>
-                <td>{{ c.approved_capacity|default:"—" }}{% if c.approved_capacity %} Mbps{% endif %}</td>
-                <td>{{ c.available_capacity|default:"—" }}{% if c.available_capacity %} Mbps{% endif %}</td>
-                <td><span class="badge bg-secondary">{{ c.status|title }}</span></td>
-                <td>{{ c.provider_reference|default:"—" }}</td>
-                <td class="small">{{ c.confirmation_date|default:"—" }}</td>
-                <td class="no-print">
-                  <div class="btn-group btn-group-sm">
-                    <a href="{% url 'workorders:bandwidth_edit' fr.pk c.provider %}" class="btn btn-outline-warning"><i class="fas fa-edit"></i></a>
-                    <form method="post" action="{% url 'workorders:bandwidth_delete' fr.pk c.provider %}" class="d-inline" onsubmit="return confirm('Remove this confirmation?')">
-                      {% csrf_token %}<button class="btn btn-outline-danger"><i class="fas fa-trash"></i></button>
-                    </form>
-                  </div>
-                </td>
-              </tr>
-              {% if c.remarks %}<tr><td colspan="8" class="small text-muted ps-4">Remarks: {{ c.remarks }}</td></tr>{% endif %}
-              {% empty %}
-              <tr><td colspan="8" class="text-center text-muted py-3">No bandwidth confirmations yet.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+        <table class="table table-sm mb-0">
+          <thead class="table-light"><tr><th>When</th><th>Stage</th><th>Action</th><th>By</th><th>Remarks</th></tr></thead>
+          <tbody>
+            {% for a in approvals %}
+            <tr>
+              <td class="small text-nowrap">{{ a.created_at|date:"d M H:i" }}</td>
+              <td>{{ a.get_stage_display }}</td>
+              <td><span class="badge bg-secondary">{{ a.get_action_display }}</span></td>
+              <td class="small">{{ a.user|default:"—" }}</td>
+              <td class="small">{{ a.remarks|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-3">No review actions yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
 
   <div class="col-lg-4">
     <div class="card mb-3">
-      <div class="card-header fw-semibold">Work Order Status</div>
-      <div class="card-body text-center">
-        <span class="badge fs-6 bg-primary rounded-pill px-4 py-2 mb-3">{{ fr.get_onboarding_status_display }}</span>
-        <div class="small text-muted mb-2">Bandwidth: {{ fr.bandwidth_status_label }}</div>
+      <div class="card-header fw-semibold">Current Stage</div>
+      <div class="card-body">
+        <div class="text-center mb-3">
+          <span class="badge fs-6 bg-primary rounded-pill px-4 py-2">{{ fr.get_onboarding_status_display }}</span>
+        </div>
+
+        {% if can_accounts_review or can_management_review or can_tech_review %}
+        <form method="post" action="{% url 'workorders:stage_action' fr.pk %}" class="no-print">
+          {% csrf_token %}
+          <input type="hidden" name="stage" value="{% if can_accounts_review %}accounts{% elif can_management_review %}management{% else %}technical{% endif %}">
+          <label class="form-label small fw-semibold">Remarks</label>
+          <textarea name="remarks" class="form-control form-control-sm mb-2" rows="2" placeholder="Review remarks"></textarea>
+          {% if can_tech_review %}
+          <label class="form-label small fw-semibold">Activation Date</label>
+          <input type="date" name="activation_date" class="form-control form-control-sm mb-2">
+          <div class="small text-muted mb-2">VLAN {{ fr.vlan_id|default:"—" }} · SCR {{ fr.scr|default:"—" }} · Link {{ fr.link_id|default:"—" }}</div>
+          {% endif %}
+          <div class="d-grid gap-1">
+            <button name="action" value="approve" class="btn btn-success btn-sm">Approve</button>
+            <button name="action" value="request_correction" class="btn btn-warning btn-sm">Request Correction</button>
+            <button name="action" value="reject" class="btn btn-outline-danger btn-sm">Reject</button>
+          </div>
+        </form>
+        {% endif %}
+
+        {% if can_tech_config %}
+        <form method="post" action="{% url 'workorders:stage_action' fr.pk %}" class="no-print">
+          {% csrf_token %}
+          <input type="hidden" name="stage" value="core">
+          <input type="hidden" name="action" value="submit_config">
+          <label class="form-label small fw-semibold">VLAN ID</label>
+          <input name="vlan_id" class="form-control form-control-sm mb-2" value="{{ fr.vlan_id }}" required>
+          <label class="form-label small fw-semibold">SCR</label>
+          <input name="scr" class="form-control form-control-sm mb-2" value="{{ fr.scr }}" required>
+          <label class="form-label small fw-semibold">Link ID</label>
+          <input name="link_id" class="form-control form-control-sm mb-2" value="{{ fr.link_id }}" required>
+          <label class="form-label small fw-semibold">Notes</label>
+          <textarea name="remarks" class="form-control form-control-sm mb-2" rows="2">{{ fr.technical_notes }}</textarea>
+          <button class="btn btn-primary btn-sm w-100">Submit Technical Configuration</button>
+        </form>
+        {% endif %}
+
+        {% if can_resubmit %}
+        <form method="post" action="{% url 'workorders:stage_action' fr.pk %}" class="no-print">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="resubmit">
+          <textarea name="remarks" class="form-control form-control-sm mb-2" rows="2" placeholder="Correction notes"></textarea>
+          <button class="btn btn-primary btn-sm w-100">Resubmit Work Order</button>
+        </form>
+        {% endif %}
+
+        {% if can_activate %}
+        <form method="post" action="{% url 'workorders:stage_action' fr.pk %}" class="no-print mt-2">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="activate">
+          <button class="btn btn-success btn-sm w-100">Mark Activated</button>
+        </form>
+        {% endif %}
+
+        {% if can_override_status %}
+        <hr>
         <form method="post" action="{% url 'workorders:update_status' fr.pk %}" class="no-print">
           {% csrf_token %}
           <select name="status" class="form-select form-select-sm mb-2">
@@ -120,8 +206,9 @@
             {% if val %}<option value="{{ val }}" {% if fr.onboarding_status == val %}selected{% endif %}>{{ label }}</option>{% endif %}
             {% endfor %}
           </select>
-          <button class="btn btn-primary btn-sm w-100">Update Status</button>
+          <button class="btn btn-outline-secondary btn-sm w-100">Admin Override Status</button>
         </form>
+        {% endif %}
       </div>
     </div>
     <div class="card mb-3">
@@ -130,6 +217,10 @@
         <div class="d-flex justify-content-between mb-1"><span class="text-muted">Created</span><span>{{ fr.created_at|date:"d M Y H:i" }}</span></div>
         <div class="d-flex justify-content-between mb-1"><span class="text-muted">Onboarded by</span><span>{{ fr.onboarded_by|default:"—" }}</span></div>
         {% if fr.approved_by %}<div class="d-flex justify-content-between"><span class="text-muted">Approved by</span><span>{{ fr.approved_by }}</span></div>{% endif %}
+        {% if fr.accounts_reviewed_by %}<div class="d-flex justify-content-between"><span class="text-muted">Accounts</span><span>{{ fr.accounts_reviewed_by }}</span></div>{% endif %}
+        {% if fr.management_reviewed_by %}<div class="d-flex justify-content-between"><span class="text-muted">Management</span><span>{{ fr.management_reviewed_by }}</span></div>{% endif %}
+        {% if fr.tech_configured_by %}<div class="d-flex justify-content-between"><span class="text-muted">Configured by</span><span>{{ fr.tech_configured_by }}</span></div>{% endif %}
+        {% if fr.activation_date %}<div class="d-flex justify-content-between"><span class="text-muted">Activation</span><span>{{ fr.activation_date|date:"d M Y" }}</span></div>{% endif %}
       </div>
     </div>
     <div class="card no-print">
@@ -139,7 +230,8 @@
           {% csrf_token %}
           <button class="btn btn-warning btn-sm w-100" {% if not services %}disabled{% endif %}><i class="fas fa-envelope me-1"></i>Send Dept. Emails</button>
         </form>
-        {% if fr.bw_emails_sent %}<div class="small text-success mt-2"><i class="fas fa-check"></i> Emails sent</div>{% endif %}
+        {% if fr.wo_email_sent %}<div class="small text-success mt-2"><i class="fas fa-check"></i> Accounts work-order email sent</div>{% endif %}
+        {% if fr.bw_emails_sent %}<div class="small text-success mt-1"><i class="fas fa-check"></i> Department emails sent</div>{% endif %}
       </div>
     </div>
   </div>

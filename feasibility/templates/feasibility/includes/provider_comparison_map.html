@@ -1,0 +1,110 @@
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{{ map_layers|json_script:"map-layers-data" }}
+<div id="provider-comparison-map" style="height: {{ map_height|default:'450' }}px; border-radius: 12px; z-index: 1;"></div>
+<div class="card mt-3">
+  <div class="card-body py-2">
+    <div id="provider-map-legend" class="d-flex flex-wrap gap-3 small"></div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+  function safeColor(c) {
+    return /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : '#607d8b';
+  }
+  const layers = JSON.parse(document.getElementById('map-layers-data').textContent);
+  const mapEl = document.getElementById('provider-comparison-map');
+  const legendEl = document.getElementById('provider-map-legend');
+  if (!mapEl || !layers.length) {
+    if (mapEl) {
+      const warn = document.createElement('div');
+      warn.className = 'alert alert-warning m-3';
+      warn.textContent = 'No provider POP coordinates available for map display.';
+      mapEl.replaceChildren(warn);
+    }
+    return;
+  }
+
+  const map = L.map('provider-comparison-map');
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  const bounds = [];
+  const customerLat = layers[0].customer_lat;
+  const customerLng = layers[0].customer_lng;
+
+  const customerIcon = L.divIcon({
+    className: '',
+    html: '<div style="background:#1565c0;color:#fff;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:bold;white-space:nowrap;"><i class="fas fa-user"></i> Customer</div>',
+    iconSize: [90, 24], iconAnchor: [45, 24]
+  });
+  L.marker([customerLat, customerLng], {icon: customerIcon, zIndexOffset: 1000}).addTo(map)
+    .bindPopup('<strong>Customer Location</strong><br>' + esc("{{ fr.display_name|escapejs }}"));
+  bounds.push([customerLat, customerLng]);
+
+  layers.forEach(function(layer) {
+    const color = safeColor(layer.color);
+    const provider = esc(layer.provider);
+    const popIcon = L.divIcon({
+      className: '',
+      html: '<div style="background:' + color + ';color:#fff;padding:4px 8px;border-radius:20px;font-size:10px;font-weight:bold;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;">' + provider + ' POP</div>',
+      iconSize: [100, 22], iconAnchor: [50, 22]
+    });
+    L.marker([layer.pop_lat, layer.pop_lng], {icon: popIcon}).addTo(map)
+      .bindPopup(
+        '<strong>' + provider + ' POP</strong><br>' +
+        'Straight: ' + (layer.straight_km != null ? layer.straight_km + ' km' : '—') + '<br>' +
+        'Route: ' + (layer.route_km != null ? layer.route_km + ' km' : '—') + '<br>' +
+        'Status: ' + esc(layer.status)
+      );
+    bounds.push([layer.pop_lat, layer.pop_lng]);
+
+    const points = (layer.polyline && layer.polyline.length)
+      ? layer.polyline
+      : [[layer.customer_lat, layer.customer_lng], [layer.pop_lat, layer.pop_lng]];
+
+    const line = L.polyline(points, {
+      color: color,
+      weight: layer.is_kloud ? 5 : 3,
+      opacity: 0.85,
+      dashArray: layer.is_kloud ? '10, 6' : null,
+    }).addTo(map);
+    line.bindPopup(
+      '<strong>' + provider + '</strong><br>' +
+      'Straight: ' + (layer.straight_km != null ? layer.straight_km + ' km' : '—') + '<br>' +
+      'Fiber route: ' + (layer.route_km != null ? layer.route_km + ' km' : '—') +
+      (layer.capacity ? '<br>Capacity: ' + esc(layer.capacity) + ' Mbps' : '') +
+      (layer.cost ? '<br>Cost: BDT ' + Number(layer.cost).toLocaleString() : '')
+    );
+    points.forEach(p => bounds.push(p));
+
+    const legendItem = document.createElement('div');
+    legendItem.className = 'd-flex align-items-center gap-2';
+    const swatch = document.createElement('span');
+    swatch.style.cssText = 'display:inline-block;width:28px;height:4px;background:' + color + ';border-radius:2px;';
+    const nameEl = document.createElement('strong');
+    nameEl.textContent = layer.provider || '';
+    const meta = document.createElement('span');
+    meta.className = 'text-muted';
+    meta.textContent = '(' + (layer.route_km != null ? layer.route_km + ' km route' : 'no route') + ')';
+    legendItem.append(swatch, nameEl, meta);
+    if (layer.is_kloud) {
+      const badge = document.createElement('span');
+      badge.className = 'badge bg-secondary';
+      badge.textContent = 'Feasibility';
+      legendItem.appendChild(badge);
+    }
+    legendEl.appendChild(legendItem);
+  });
+
+  if (bounds.length) {
+    map.fitBounds(bounds, {padding: [50, 50]});
+  }
+})();
+</script>

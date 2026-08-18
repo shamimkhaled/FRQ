@@ -113,11 +113,12 @@
         <thead class="table-dark">
           <tr>
             <th>WO ID</th>
+            <th>FRQ</th>
             <th>Customer</th>
             <th>Company</th>
             <th>Phone</th>
             <th class="d-none d-lg-table-cell">Address</th>
-            <th>NTTN</th>
+            <th>Upstream</th>
             <th>Capacity</th>
             <th>WO Status</th>
             <th>BW Status</th>
@@ -129,11 +130,12 @@
           {% for fr in page %}
           <tr>
             <td class="fw-semibold">{{ fr.work_order_label }}</td>
-            <td>{{ fr.customer_name }}</td>
+            <td class="small">{{ fr.frq_label }}</td>
+            <td>{{ fr.display_name }}</td>
             <td>{{ fr.company_name|default:"—" }}</td>
             <td class="small">{{ fr.phone_number }}</td>
             <td class="small d-none d-lg-table-cell text-truncate" style="max-width:160px">{{ fr.address }}</td>
-            <td>{{ fr.get_preferred_nttn_display|default:"—" }}</td>
+            <td>{{ fr.upstream_provider_label }}</td>
             <td>{{ fr.requested_capacity }} Mbps</td>
             <td><span class="badge bg-primary">{{ fr.get_onboarding_status_display }}</span></td>
             <td><span class="badge bg-secondary">{{ fr.bandwidth_status_label }}</span></td>
@@ -148,7 +150,7 @@
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="11" class="text-center text-muted py-4">No work orders found.</td></tr>
+          <tr><td colspan="12" class="text-center text-muted py-4">No work orders found.</td></tr>
           {% endfor %}
         </tbody>
       </table>

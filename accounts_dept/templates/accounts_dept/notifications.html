@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Notifications — Kloud ISP{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <a href="{% url 'accounts:notifications' %}" class="btn btn-sm {% if not unread_only %}btn-primary{% else %}btn-outline-secondary{% endif %}">All</a>
+    <a href="{% url 'accounts:notifications' %}?unread=1" class="btn btn-sm {% if unread_only %}btn-primary{% else %}btn-outline-secondary{% endif %}">Unread</a>
+  </div>
+  <form method="post" action="{% url 'accounts:notifications_read_all' %}">
+    {% csrf_token %}
+    <button class="btn btn-sm btn-outline-secondary">Mark all read</button>
+  </form>
+</div>
+<div class="card">
+  <div class="list-group list-group-flush">
+    {% for n in page %}
+    <a href="{% url 'accounts:notification_open' n.pk %}" class="list-group-item list-group-item-action {% if not n.is_read %}list-group-item-info{% endif %}">
+      <div class="d-flex justify-content-between">
+        <strong>{{ n.title }}</strong>
+        <span class="small text-muted">{{ n.created_at|date:"d M Y H:i" }}</span>
+      </div>
+      {% if n.message %}<div class="small text-muted">{{ n.message }}</div>{% endif %}
+    </a>
+    {% empty %}
+    <div class="list-group-item text-muted text-center py-4">No notifications.</div>
+    {% endfor %}
+  </div>
+  {% if page.has_other_pages %}
+  <div class="card-footer d-flex justify-content-between">
+    <span class="small text-muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    <div>
+      {% if page.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ page.previous_page_number }}{% if unread_only %}&unread=1{% endif %}">Previous</a>{% endif %}
+      {% if page.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ page.next_page_number }}{% if unread_only %}&unread=1{% endif %}">Next</a>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

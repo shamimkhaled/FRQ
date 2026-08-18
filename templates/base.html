@@ -14,12 +14,14 @@
     .sidebar .brand small { color: #90caf9; font-size: 11px; }
     .sidebar .nav-link { color: #b0bec5; padding: 10px 20px; display: flex; align-items: center; gap: 10px; transition: all .2s; border-left: 3px solid transparent; }
     .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: #2d3559; border-left-color: #4fc3f7; }
+    .sidebar button.nav-link { cursor: pointer; font: inherit; }
     .sidebar .nav-section { color: #607d8b; font-size: 11px; padding: 15px 20px 5px; text-transform: uppercase; letter-spacing: 1px; }
     .main-content { margin-left: 250px; padding: 20px; }
     .topbar { background: #fff; padding: 12px 20px; margin: -20px -20px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.1); display: flex; justify-content: space-between; align-items: center; }
     .stat-card { border-radius: 12px; padding: 20px; color: #fff; position: relative; overflow: hidden; }
     .stat-card .icon { font-size: 40px; opacity: .3; position: absolute; right: 15px; top: 15px; }
     .badge-status-pending { background: #fff3e0; color: #e65100; }
+    .badge-status-submitted { background: #e8eaf6; color: #3949ab; }
     .badge-status-under_review { background: #e3f2fd; color: #1565c0; }
     .badge-status-feasible { background: #e8f5e9; color: #2e7d32; }
     .badge-status-feasible_additional_cost { background: #fff8e1; color: #f57f17; }
@@ -45,35 +47,66 @@
     <small>ISP Management System</small>
   </div>
   {% if user.is_authenticated %}
+  {% load rbac_tags %}
   <div class="mt-3">
     <div class="nav-section">Main</div>
+    {% has_perm 'menu.dashboard' as can_dashboard %}
+    {% if can_dashboard %}
     <a class="nav-link {% block nav_dashboard %}{% endblock %}" href="{% url 'feasibility:dashboard' %}">
       <i class="fas fa-tachometer-alt fa-fw"></i> Dashboard
     </a>
+    {% endif %}
+    {% has_perm 'menu.feasibility' as can_feasibility %}
+    {% if can_feasibility %}
     <div class="nav-section">Feasibility</div>
     <a class="nav-link {% block nav_feasibility %}{% endblock %}" href="{% url 'feasibility:dashboard' %}">
       <i class="fas fa-map-marker-alt fa-fw"></i> Feasibility Requests
     </a>
+    {% has_perm 'feasibility.create' as can_create_frq %}
+    {% if can_create_frq %}
     <a class="nav-link" href="{% url 'feasibility:create' %}">
       <i class="fas fa-plus-circle fa-fw"></i> New Request
     </a>
+    {% endif %}
+    {% has_perm 'workorders.create' as can_create_wo %}
+    {% if can_create_wo %}
     <a class="nav-link {% block nav_wo_create %}{% endblock %}" href="{% url 'feasibility:work_order_create' %}">
       <i class="fas fa-file-circle-plus fa-fw"></i> Create Work Order
     </a>
+    {% endif %}
+    {% endif %}
+    {% has_perm 'menu.workorders' as can_workorders %}
+    {% if can_workorders %}
     <div class="nav-section">Operations</div>
     <a class="nav-link {% block nav_workorders %}{% endblock %}" href="{% url 'workorders:list' %}">
       <i class="fas fa-file-contract fa-fw"></i> Work Orders
     </a>
+    {% endif %}
+    {% has_perm 'menu.calculator' as can_calculator %}
+    {% if can_calculator %}
     <a class="nav-link {% block nav_calculator %}{% endblock %}" href="{% url 'workorders:calculator' %}">
       <i class="fas fa-calculator fa-fw"></i> Bandwidth Calculator
     </a>
+    {% endif %}
     <div class="nav-section">Admin</div>
+    {% has_perm 'audit.view' as can_audit %}
+    {% if can_audit %}
+    <a class="nav-link {% block nav_audit %}{% endblock %}" href="{% url 'accounts:audit_log' %}">
+      <i class="fas fa-history fa-fw"></i> Audit Log
+    </a>
+    {% endif %}
+    {% has_perm 'admin.access' as can_admin %}
+    {% if can_admin or user.is_superuser %}
     <a class="nav-link" href="/admin/">
       <i class="fas fa-cog fa-fw"></i> Admin Panel
     </a>
-    <a class="nav-link" href="{% url 'logout' %}">
-      <i class="fas fa-sign-out-alt fa-fw"></i> Logout
-    </a>
+    {% endif %}
+    <form method="post" action="{% url 'logout' %}" class="m-0">
+      {% csrf_token %}
+      <button type="submit" class="nav-link border-0 bg-transparent w-100 text-start">
+        <i class="fas fa-sign-out-alt fa-fw"></i> Logout
+      </button>
+    </form>
   </div>
   {% endif %}
 </nav>
@@ -84,7 +117,29 @@
     <h5 class="mb-0 fw-bold text-dark">{% block page_title %}Dashboard{% endblock %}</h5>
     <div class="d-flex align-items-center gap-3">
       {% if user.is_authenticated %}
-      <span class="text-muted"><i class="fas fa-user-circle me-1"></i> {{ user.get_full_name|default:user.username }}</span>
+      <div class="dropdown">
+        <a class="text-dark text-decoration-none position-relative" href="#" data-bs-toggle="dropdown">
+          <i class="fas fa-bell"></i>
+          {% if unread_notification_count %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:9px">{{ unread_notification_count }}</span>{% endif %}
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end" style="min-width:320px">
+          <li class="dropdown-header d-flex justify-content-between">Notifications
+            <a href="{% url 'accounts:notifications' %}" class="small">View all</a>
+          </li>
+          {% for n in recent_notifications %}
+          <li><a class="dropdown-item small" href="{% url 'accounts:notification_open' n.pk %}">
+            <div class="fw-semibold">{{ n.title }}</div>
+            <div class="text-muted">{{ n.created_at|timesince }} ago</div>
+          </a></li>
+          {% empty %}
+          <li><span class="dropdown-item text-muted small">No unread notifications</span></li>
+          {% endfor %}
+        </ul>
+      </div>
+      <span class="text-muted">
+        <i class="fas fa-user-circle me-1"></i> {{ user.get_full_name|default:user.username }}
+        {% if user_role %}<span class="badge bg-secondary ms-1">{{ user_role.name }}</span>{% elif user.is_superuser %}<span class="badge bg-dark ms-1">Superuser</span>{% endif %}
+      </span>
       {% endif %}
     </div>
   </div>

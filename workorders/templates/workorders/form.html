@@ -1,91 +1,164 @@
 {% extends 'base.html' %}
 {% block title %}{% if edit_mode %}Edit{% else %}Create{% endif %} Work Order | Kloud{% endblock %}
-{% block page_title %}{% if edit_mode %}{{ fr.work_order_label }}{% else %}Create Work Order{% endif %}{% endblock %}
+{% block page_title %}{% if edit_mode %}{{ fr.work_order_label }}{% else %}Create Work Order from {{ fr.frq_label }}{% endif %}{% endblock %}
 {% block nav_workorders %}active{% endblock %}
+{% block extra_css %}
+<style>
+#woForm:not(.cat-MAC) .mac-only { display: none; }
+#woForm.cat-DC .qty-col,
+#woForm.cat-DC .qty-only,
+#woForm.cat-DC .svc-type-col { display: none; }
+#woForm.cat-DC .label-bw { display: none; }
+#woForm:not(.cat-DC) .label-dc { display: none; }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="row g-3">
   <div class="col-lg-4">
     <div class="card sticky-top" style="top:20px">
-      <div class="card-header bg-success text-white fw-semibold">From Feasibility #{{ fr.pk }}</div>
+      <div class="card-header bg-success text-white fw-semibold">{{ fr.frq_label }} → Work Order</div>
       <div class="card-body small">
         <table class="table table-sm table-borderless mb-0">
-          <tr><th class="text-muted">Customer</th><td>{{ fr.customer_name }}</td></tr>
-          <tr><th class="text-muted">Contact</th><td>{{ fr.proprietor_name|default:"—" }}</td></tr>
-          <tr><th class="text-muted">Company</th><td>{{ fr.company_name|default:"—" }}</td></tr>
+          <tr><th class="text-muted">FRQ ID</th><td class="fw-semibold">{{ fr.frq_label }}</td></tr>
+          <tr><th class="text-muted">Contact</th><td>{{ fr.display_name }}</td></tr>
+          <tr><th class="text-muted">Email</th><td>{{ fr.email|default:"—" }}</td></tr>
           <tr><th class="text-muted">Phone</th><td>{{ fr.phone_number }}</td></tr>
+          <tr><th class="text-muted">Company</th><td>{{ fr.company_name|default:"—" }}</td></tr>
+          <tr><th class="text-muted">Customer Type</th><td>{{ fr.get_customer_type_display }}</td></tr>
           <tr><th class="text-muted">Address</th><td>{{ fr.address }}</td></tr>
-          <tr><th class="text-muted">Coordinates</th><td>{{ fr.latitude }}, {{ fr.longitude }}</td></tr>
-          <tr><th class="text-muted">NTTN</th><td>{{ fr.get_preferred_nttn_display }}</td></tr>
+          {% if fr.division %}<tr><th class="text-muted">Geo</th><td>{{ fr.division }} / {{ fr.district }} / {{ fr.upazila }}</td></tr>{% endif %}
+          <tr><th class="text-muted">Preferred NTTN</th><td>{{ fr.preferred_nttn_label }}</td></tr>
           <tr><th class="text-muted">Capacity</th><td>{{ fr.requested_capacity }} Mbps</td></tr>
+          <tr><th class="text-muted">Status</th><td>{{ fr.get_status_display }}</td></tr>
         </table>
       </div>
     </div>
   </div>
   <div class="col-lg-8">
-    <form method="post" enctype="multipart/form-data" id="woForm" novalidate>
+    <form method="post" enctype="multipart/form-data" id="woForm" class="cat-{{ form.customer_category.value|default:'BW' }}" novalidate>
       {% csrf_token %}
+      {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+
       <div class="card mb-3">
         <div class="card-header fw-semibold">Work Order Details</div>
         <div class="card-body row g-3">
           <div class="col-md-6">
             <label class="form-label">Email</label>
-            <input type="email" name="email" class="form-control" value="{{ form.email.value|default:fr.email }}">
+            {{ form.email }}
+            {{ form.email.errors }}
           </div>
           <div class="col-md-6">
             <label class="form-label">NID Number <span class="text-danger">*</span></label>
-            <input type="text" name="nid_number" class="form-control" value="{{ form.nid_number.value|default:'' }}" required>
+            {{ form.nid_number }}
+            {{ form.nid_number.errors }}
           </div>
           <div class="col-md-6">
-            <label class="form-label">NTTN Provider</label>
-            <select name="preferred_nttn" class="form-select">
-              {% for val, label in form.fields.preferred_nttn.choices %}
-              {% if val %}<option value="{{ val }}" {% if form.preferred_nttn.value == val %}selected{% endif %}>{{ label }}</option>{% endif %}
-              {% endfor %}
-            </select>
+            <label class="form-label">SFP Wavelength</label>
+            {{ form.sfp_wavelength }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Billing Date <span class="text-danger">*</span></label>
+            {{ form.billing_date }}
+            {{ form.billing_date.errors }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Upstream Provider <span class="text-danger">*</span></label>
+            {{ form.upstream_provider }}
+            {{ form.upstream_provider.errors }}
+          </div>
+          <div class="col-md-6" id="upstreamOtherWrap" style="display:none">
+            <label class="form-label">Other Upstream Name <span class="text-danger">*</span></label>
+            {{ form.upstream_provider_other }}
+            {{ form.upstream_provider_other.errors }}
           </div>
           <div class="col-md-6">
             <label class="form-label">Requested Capacity (Mbps)</label>
-            <input type="number" name="requested_capacity" class="form-control" value="{{ form.requested_capacity.value|default:fr.requested_capacity }}" min="1" required>
+            {{ form.requested_capacity }}
           </div>
           <div class="col-md-6">
             <label class="form-label">Expected Installation Date</label>
-            <input type="date" name="expected_installation_date" class="form-control" value="{{ form.expected_installation_date.value|default:'' }}">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Work Order Status</label>
-            <select name="onboarding_status" class="form-select">
-              {% for val, label in form.fields.onboarding_status.choices %}
-              {% if val %}<option value="{{ val }}" {% if form.onboarding_status.value == val %}selected{% endif %}>{{ label }}</option>{% endif %}
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Cheque Image</label>
-            <input type="file" name="cheque_image" class="form-control" accept="image/*,application/pdf">
+            {{ form.expected_installation_date }}
           </div>
           <div class="col-12">
             <label class="form-label">Installation Notes</label>
-            <textarea name="installation_notes" class="form-control" rows="2">{{ form.installation_notes.value|default:'' }}</textarea>
+            {{ form.installation_notes }}
           </div>
         </div>
       </div>
 
       <div class="card mb-3">
         <div class="card-header fw-semibold d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <span>Dynamic Services</span>
+          <span>Attachments</span>
+          <button type="button" class="btn btn-sm btn-success" id="addAttachment"><i class="fas fa-plus"></i> Add File</button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 align-middle">
+            <thead class="table-dark">
+              <tr><th>Type</th><th>File</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for doc in fr.documents.all %}
+              <tr>
+                <td><span class="badge bg-secondary">{{ doc.get_doc_type_display }}</span></td>
+                <td>
+                  <a href="{% url 'workorders:attachment_download' fr.pk doc.pk %}">{{ doc.file.name|cut:"onboarding_docs/" }}</a>
+                  <div class="form-check mt-1">
+                    <input class="form-check-input" type="checkbox" name="delete_attachment" value="{{ doc.pk }}" id="delDoc{{ doc.pk }}">
+                    <label class="form-check-label small text-danger" for="delDoc{{ doc.pk }}">Remove</label>
+                  </div>
+                </td>
+                <td></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tbody id="attachBody"></tbody>
+          </table>
+        </div>
+        <div class="card-body small text-muted py-2">
+          Add one or more files and tag each as NID Front, NID Back, Cheque / Payment, Agreement, or Other.
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header fw-semibold d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <span>Services</span>
           <div class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-success" id="addRow"><i class="fas fa-plus"></i> Add</button>
+            <button type="button" class="btn btn-success" id="addRow"><i class="fas fa-plus"></i> Add Service</button>
             <button type="button" class="btn btn-outline-primary" id="dupRow"><i class="fas fa-copy"></i> Duplicate Last</button>
           </div>
         </div>
+        <div class="card-body border-bottom py-3">
+          <label class="form-label fw-semibold mb-2">Customer Category <span class="text-danger">*</span></label>
+          <div class="d-flex flex-wrap gap-2" id="categoryPills">
+            {% for value, label in form.fields.customer_category.choices %}
+            <input type="radio" class="btn-check" name="customer_category" id="cat_{{ value }}" value="{{ value }}"
+                   {% if form.customer_category.value == value or not form.customer_category.value and value == 'BW' %}checked{% endif %} required>
+            <label class="btn btn-outline-primary" for="cat_{{ value }}">{{ label }}</label>
+            {% endfor %}
+          </div>
+          {{ form.customer_category.errors }}
+          <div class="small text-muted mt-2" id="catHelp">
+            Choose Bandwidth, MAC, or Data Connectivity first, then add services (IPT, GGC, FNA, BDIX, CDN).
+          </div>
+        </div>
         <div class="table-responsive">
-          <table class="table table-sm mb-0">
+          <table class="table table-sm mb-0 align-middle">
             <thead class="table-dark">
-              <tr><th>Service</th><th>Mbps</th><th>Price/Mbps</th><th>Qty</th><th>Line Total</th><th></th></tr>
+              <tr>
+                <th class="svc-type-col">Service</th>
+                <th><span class="label-bw">Mbps</span><span class="label-dc">Capacity</span></th>
+                <th>Price</th>
+                <th class="qty-col">Qty</th>
+                <th>Line Total</th>
+                <th></th>
+              </tr>
             </thead>
             <tbody id="svcBody"></tbody>
           </table>
+        </div>
+        <div class="card-body small text-muted py-2" id="catHint">
+          Select one customer category. Add Service inserts a row for that category only. Submit saves only that category.
         </div>
       </div>
 
@@ -94,26 +167,41 @@
           <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label">Global VAT %</label>
-              <input type="number" step="any" name="wo_vat_percent" id="woVat" class="form-control" value="{{ wo_vat }}">
+              {{ form.wo_vat_percent }}
             </div>
             <div class="col-md-4">
               <label class="form-label">Global Discount (BDT)</label>
-              <input type="number" step="any" name="wo_discount" id="woDiscount" class="form-control" value="{{ wo_discount }}">
+              {{ form.wo_discount }}
+            </div>
+          </div>
+          <div class="row g-3 mt-0 mac-only">
+            <div class="col-md-4">
+              <label class="form-label">Client Share %</label>
+              {{ form.wo_client_share_percent }}
+              {{ form.wo_client_share_percent.errors }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Kloud Share %</label>
+              <input type="number" id="woKloudShare" class="form-control" readonly value="{{ fr.wo_kloud_share_percent|default:50 }}">
             </div>
           </div>
           <hr>
           <div class="row text-center">
-            <div class="col-md-3"><div class="text-muted small">Total Mbps</div><div class="fs-5 fw-bold" id="sumMbps">0</div></div>
+            <div class="col-md-3"><div class="text-muted small" id="sumMbpsLabel">Total Mbps</div><div class="fs-5 fw-bold" id="sumMbps">0</div></div>
             <div class="col-md-3"><div class="text-muted small">Subtotal</div><div class="fs-5 fw-bold" id="sumSub">BDT 0</div></div>
             <div class="col-md-3"><div class="text-muted small">VAT</div><div class="fs-5 fw-bold" id="sumVat">BDT 0</div></div>
             <div class="col-md-3"><div class="text-muted small">Grand Total</div><div class="fs-4 fw-bold text-success" id="sumGrand">BDT 0</div></div>
+          </div>
+          <div class="row text-center mt-2 mac-only" id="macSummary">
+            <div class="col-md-6"><div class="text-muted small">MAC Client Share</div><div class="fw-bold text-primary" id="sumMacClient">BDT 0</div></div>
+            <div class="col-md-6"><div class="text-muted small">MAC Kloud Share</div><div class="fw-bold text-success" id="sumMacKloud">BDT 0</div></div>
           </div>
         </div>
       </div>
 
       <div class="d-flex gap-2 justify-content-end">
         <a href="{% if edit_mode %}{% url 'workorders:detail' fr.pk %}{% else %}{% url 'feasibility:detail' fr.pk %}{% endif %}" class="btn btn-outline-secondary">Cancel</a>
-        <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>{% if edit_mode %}Update{% else %}Create{% endif %} Work Order</button>
+        <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>{% if edit_mode %}Update{% else %}Submit{% endif %} Work Order</button>
       </div>
     </form>
   </div>
@@ -122,4 +210,43 @@
 
 {% block extra_js %}
 {% include 'workorders/includes/service_rows_js.html' %}
+{{ doc_types|json_script:"wo-doc-types" }}
+<script>
+(function () {
+  const sel = document.getElementById('id_upstream_provider');
+  const wrap = document.getElementById('upstreamOtherWrap');
+  const othersId = '{{ upstream_others_id }}';
+  function toggleOther() {
+    wrap.style.display = (sel && String(sel.value) === String(othersId)) ? '' : 'none';
+  }
+  sel?.addEventListener('change', toggleOther);
+  toggleOther();
+})();
+(function () {
+  const DOC_TYPES = JSON.parse(document.getElementById('wo-doc-types').textContent);
+  let attachIndex = 0;
+  function addAttachmentRow() {
+    const idx = attachIndex++;
+    const opts = DOC_TYPES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>
+        <select name="attachment_${idx}_type" class="form-select form-select-sm">
+          <option value="">-- Select type --</option>
+          ${opts}
+        </select>
+      </td>
+      <td>
+        <input type="file" name="attachment_${idx}_file" class="form-control form-control-sm" accept="image/*,application/pdf">
+      </td>
+      <td>
+        <button type="button" class="btn btn-sm btn-outline-danger rm-attach"><i class="fas fa-trash"></i></button>
+      </td>`;
+    document.getElementById('attachBody').appendChild(tr);
+    tr.querySelector('.rm-attach').addEventListener('click', () => tr.remove());
+  }
+  document.getElementById('addAttachment')?.addEventListener('click', addAttachmentRow);
+  addAttachmentRow();
+})();
+</script>
 {% endblock %}

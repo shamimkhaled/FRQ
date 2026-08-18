@@ -1,74 +1,349 @@
 {% extends 'base.html' %}
-{% block title %}Review #{{ fr.pk }} | Kloud{% endblock %}
-{% block page_title %}Review Feasibility #{{ fr.pk }}{% endblock %}
+{% block title %}Review {{ fr.frq_label }} | Kloud{% endblock %}
+{% block page_title %}FRQ Review — {{ fr.frq_label }}{% endblock %}
 
 {% block content %}
-<div class="row">
-  <div class="col-md-4 mb-3">
-    <div class="card">
-      <div class="card-header fw-semibold bg-light">Request Summary</div>
-      <div class="card-body">
-        <table class="table table-sm table-borderless mb-0">
-          <tr><th class="text-muted small">Customer</th><td>{{ fr.customer_name }}</td></tr>
-          <tr><th class="text-muted small">Phone</th><td>{{ fr.phone_number }}</td></tr>
-          <tr><th class="text-muted small">Capacity</th><td>{{ fr.requested_capacity }} Mbps</td></tr>
-          <tr><th class="text-muted small">Latitude</th><td>{{ fr.latitude }}</td></tr>
-          <tr><th class="text-muted small">Longitude</th><td>{{ fr.longitude }}</td></tr>
-          {% if fr.nearest_pop %}
-          <tr><th class="text-muted small">Nearest POP</th><td>{{ fr.nearest_pop.name }}</td></tr>
-          <tr><th class="text-muted small">Air Distance</th><td>{{ fr.air_distance_km }} km</td></tr>
-          {% endif %}
-        </table>
+<div class="d-flex gap-2 mb-3 flex-wrap no-print">
+  <a href="{% url 'feasibility:detail' fr.pk %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Back</a>
+  <a href="{% url 'feasibility:provider_comparison' fr.pk %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-balance-scale me-1"></i>Legacy Comparison</a>
+  <button type="button" class="btn btn-outline-dark btn-sm" onclick="window.print()"><i class="fas fa-print me-1"></i>Print / PDF</button>
+</div>
+
+{% include 'feasibility/includes/workflow_progress.html' %}
+
+<form method="post" id="review-form">
+  {% csrf_token %}
+
+  <!-- Section 1: Client FRQ Summary -->
+  <div class="card mb-3">
+    <div class="card-header fw-semibold bg-primary text-white">
+      <i class="fas fa-user me-2"></i>Section 1 — Client FRQ Summary
+    </div>
+    <div class="card-body">
+      <div class="row g-3 mb-3">
+        <div class="col-md-3">
+          <label class="form-label text-muted small">FRQ ID</label>
+          <div class="fw-bold fs-5">{{ fr.frq_label }}</div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label text-muted small">Current Status</label>
+          <div><span class="badge badge-status-{{ fr.status }} rounded-pill px-3">{{ fr.get_status_display }}</span></div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label text-muted small">Submitted By</label>
+          <div>{{ fr.submitted_by.get_full_name|default:fr.submitted_by.username|default:"—" }}</div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label text-muted small">Submission Date</label>
+          <div>{{ fr.created_at|date:"d M Y, H:i" }}</div>
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Contact Person</label>
+          {{ client_form.contact_person }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Email</label>
+          {{ client_form.email }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Customer Type</label>
+          {{ client_form.customer_type }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Phone</label>
+          {{ client_form.phone_number }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Company</label>
+          {{ client_form.company_name }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Capacity (Mbps)</label>
+          {{ client_form.requested_capacity }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Preferred NTTN</label>
+          {{ client_form.preferred_nttn_provider }}
+        </div>
+        <div class="col-md-4" id="preferred-other-wrap" style="display:none;">
+          <label class="form-label fw-semibold">Other NTTN Name</label>
+          {{ client_form.preferred_nttn_other }}
+          {% for e in client_form.preferred_nttn_other.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+        {% if fr.division %}
+        <div class="col-md-4">
+          <label class="form-label text-muted small">Division / District / Upazila</label>
+          <div>{{ fr.division.name }}, {{ fr.district.name }}, {{ fr.upazila.name }}</div>
+        </div>
+        {% endif %}
+        <div class="col-12">
+          <label class="form-label fw-semibold">Address</label>
+          {{ client_form.address }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label text-muted small">Customer Latitude</label>
+          <div class="form-control bg-light">{{ fr.latitude }}</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label text-muted small">Customer Longitude</label>
+          <div class="form-control bg-light">{{ fr.longitude }}</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label text-muted small">Google Maps</label>
+          <div><a href="{{ fr.customer_maps_url }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-map-marker-alt me-1"></i>Open Customer Location</a></div>
+        </div>
+        <div class="col-12">
+          <label class="form-label text-muted small">Client Remarks (from submission)</label>
+          <div class="form-control bg-light">{{ fr.remarks|default:"—" }}</div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="col-md-8">
-    <div class="card">
-      <div class="card-header fw-semibold"><i class="fas fa-edit me-2"></i>Engineering Review</div>
-      <div class="card-body">
-        <form method="post">
-          {% csrf_token %}
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
-              <select name="status" class="form-select">
-                {% for val, label in form.fields.status.choices %}
-                <option value="{{ val }}" {% if form.status.value == val %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">Estimated Delivery (Working Days)</label>
-              <input type="number" name="estimated_delivery_days" class="form-control" value="{{ form.estimated_delivery_days.value|default:'' }}" placeholder="e.g. 5">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">Fiber Route Distance (km)</label>
-              <input type="number" step="any" name="fiber_route_distance_km" class="form-control" value="{{ form.fiber_route_distance_km.value|default:'' }}">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">Estimated Fiber Cost (BDT)</label>
-              <input type="number" step="any" name="estimated_fiber_cost" class="form-control" value="{{ form.estimated_fiber_cost.value|default:'' }}">
-            </div>
-            <div class="col-12">
-              <label class="form-label fw-semibold">Remarks (for client)</label>
-              <textarea name="remarks" rows="3" class="form-control">{{ form.remarks.value|default:'' }}</textarea>
-            </div>
-            <div class="col-12">
-              <label class="form-label fw-semibold">Engineering Notes (internal)</label>
-              <textarea name="engineering_notes" rows="3" class="form-control">{{ form.engineering_notes.value|default:'' }}</textarea>
-            </div>
-          </div>
-          <div class="d-flex gap-2 justify-content-end mt-3">
-            <a href="{% url 'feasibility:detail' fr.pk %}" class="btn btn-outline-secondary">Cancel</a>
-            {% if fr.can_create_work_order %}
-            <a href="{% url 'workorders:create' fr.pk %}" class="btn btn-success"><i class="fas fa-file-circle-plus me-1"></i>Create Work Order</a>
-            {% endif %}
-            <button type="submit" class="btn btn-warning"><i class="fas fa-save me-1"></i>Save Review</button>
-          </div>
-        </form>
+  <!-- Section 2: NTTN Review -->
+  <div class="card mb-3">
+    <div class="card-header fw-semibold bg-success text-white d-flex justify-content-between align-items-center">
+      <span><i class="fas fa-network-wired me-2"></i>Section 2 — NTTN Review</span>
+      <button type="button" class="btn btn-light btn-sm" id="add-nttn-row"><i class="fas fa-plus me-1"></i>Add NTTN</button>
+    </div>
+    <div class="card-body">
+      <p class="text-muted small mb-3">
+        Enter each NTTN POP coordinates. Distance and the Google Maps <strong>Directions</strong> link
+        use the client location from Section 1
+        (<a href="{{ fr.customer_maps_url }}" target="_blank">{{ fr.latitude }}, {{ fr.longitude }}</a>).
+      </p>
+      <div id="nttn-rows">
+        {% for entry in nttn_entries %}
+        {% include 'feasibility/includes/nttn_review_row.html' with index=forloop.counter0 entry=entry %}
+        {% empty %}
+        {% include 'feasibility/includes/nttn_review_row.html' with index=0 entry=None %}
+        {% endfor %}
+      </div>
+      <div class="mt-3">
+        <label class="form-label small fw-semibold"><i class="fas fa-map me-1"></i>Client → NTTN route map</label>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <div id="nttn-review-map" style="height: 380px; border-radius: 12px; z-index: 1;"></div>
+        <div class="small text-muted mt-2">Straight-line distance from the client pin to each NTTN POP. Click Directions to open the Google Maps route.</div>
       </div>
     </div>
   </div>
-</div>
+
+  <!-- Section 3: Engineering Review -->
+  <div class="card mb-3">
+    <div class="card-header fw-semibold bg-warning text-dark">
+      <i class="fas fa-hard-hat me-2"></i>Section 3 — Engineering Review
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Feasibility Status <span class="text-danger">*</span></label>
+          {{ eng_form.status }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Estimated Delivery (Working Days)</label>
+          {{ eng_form.estimated_delivery_days }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Fiber Route Distance (km)</label>
+          {{ eng_form.fiber_route_distance_km }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Estimated Fiber Cost (BDT)</label>
+          {{ eng_form.estimated_fiber_cost }}
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Engineering Notes (internal)</label>
+          {{ eng_form.engineering_notes }}
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Review Remarks (for client / Sales)</label>
+          {{ eng_form.remarks }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 justify-content-end flex-wrap no-print">
+    <a href="{% url 'feasibility:detail' fr.pk %}" class="btn btn-outline-secondary">Cancel</a>
+    <button type="submit" class="btn btn-warning btn-lg">
+      <i class="fas fa-check-circle me-1"></i>Submit Complete Review
+    </button>
+  </div>
+</form>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{{ nttn_providers_data|json_script:"nttn-providers-data" }}
+<script>
+(function() {
+  const providers = JSON.parse(document.getElementById('nttn-providers-data').textContent);
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+  const customerLat = {{ customer_lat }};
+  const customerLng = {{ customer_lng }};
+  const NTTN_COLORS = ['#c62828', '#2e7d32', '#6a1b9a', '#ef6c00', '#00838f', '#1565c0'];
+  let rowIndex = document.querySelectorAll('.nttn-review-row').length;
+
+  function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const toRad = d => d * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  function directionsUrl(destLat, destLng) {
+    if (destLat == null || destLng == null || isNaN(destLat) || isNaN(destLng)) return '#';
+    return 'https://www.google.com/maps/dir/?api=1&origin='
+      + customerLat + ',' + customerLng
+      + '&destination=' + destLat + ',' + destLng;
+  }
+
+  const customerIcon = L.divIcon({
+    className: '',
+    html: '<div style="background:#1565c0;color:#fff;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:bold;white-space:nowrap;"><i class="fas fa-user"></i> Client</div>',
+    iconSize: [80, 24], iconAnchor: [40, 24]
+  });
+
+  const nttnMap = L.map('nttn-review-map').setView([customerLat, customerLng], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(nttnMap);
+  const nttnLayerGroup = L.layerGroup().addTo(nttnMap);
+
+  function refreshNttnMap() {
+    nttnLayerGroup.clearLayers();
+    const bounds = [[customerLat, customerLng]];
+    L.marker([customerLat, customerLng], {icon: customerIcon, zIndexOffset: 1000})
+      .addTo(nttnLayerGroup)
+      .bindPopup('<strong>Client (Section 1)</strong><br>' + customerLat + ', ' + customerLng);
+    document.querySelectorAll('.nttn-review-row').forEach((row, i) => {
+      const lat = parseFloat(row.querySelector('.nttn-lat').value);
+      const lng = parseFloat(row.querySelector('.nttn-lng').value);
+      if (isNaN(lat) || isNaN(lng)) return;
+      const color = NTTN_COLORS[i % NTTN_COLORS.length];
+      const sel = row.querySelector('.nttn-provider-select');
+      const name = esc((sel && sel.selectedOptions[0] && sel.value) ? sel.selectedOptions[0].text : ('NTTN #' + (i + 1)));
+      const dist = haversine(customerLat, customerLng, lat, lng).toFixed(3);
+      const popIcon = L.divIcon({
+        className: '',
+        html: '<div style="background:' + color + ';color:#fff;padding:4px 8px;border-radius:20px;font-size:10px;font-weight:bold;white-space:nowrap;">' + name + '</div>',
+        iconSize: [110, 22], iconAnchor: [55, 22]
+      });
+      L.marker([lat, lng], {icon: popIcon}).addTo(nttnLayerGroup)
+        .bindPopup('<strong>' + name + ' POP</strong><br>Distance from client: ' + dist + ' km<br>'
+          + '<a href="' + directionsUrl(lat, lng) + '" target="_blank">Google Maps Directions</a>');
+      L.polyline([[customerLat, customerLng], [lat, lng]], {
+        color: color, weight: 3, opacity: 0.85, dashArray: '8, 6'
+      }).addTo(nttnLayerGroup).bindPopup(name + '<br>' + dist + ' km from client');
+      bounds.push([lat, lng]);
+    });
+    nttnMap.fitBounds(bounds, {padding: [40, 40], maxZoom: 14});
+    setTimeout(() => nttnMap.invalidateSize(), 200);
+  }
+
+  function reindexRow(row, idx) {
+    row.dataset.index = idx;
+    row.querySelector('strong.text-success').innerHTML = '<i class="fas fa-broadcast-tower me-1"></i>NTTN Entry #' + (idx + 1);
+    row.querySelectorAll('[name]').forEach(el => {
+      el.name = el.name.replace(/nttn_\d+/, 'nttn_' + idx);
+    });
+  }
+
+  function toggleOther(selectEl, wrapEl, otherInput) {
+    const opt = selectEl.options[selectEl.selectedIndex];
+    const code = opt ? opt.dataset.code : '';
+    const show = code === 'others';
+    wrapEl.style.display = show ? '' : 'none';
+    if (!show && otherInput) otherInput.value = '';
+  }
+
+  function bindRow(row) {
+    const providerSel = row.querySelector('.nttn-provider-select');
+    const otherWrap = row.querySelector('.nttn-other-wrap');
+    const otherInput = row.querySelector('.nttn-other-input');
+    const latInput = row.querySelector('.nttn-lat');
+    const lngInput = row.querySelector('.nttn-lng');
+    const distEl = row.querySelector('.nttn-distance');
+    const mapsLink = row.querySelector('.nttn-maps-link');
+    const removeBtn = row.querySelector('.nttn-remove');
+
+    function updateDistance() {
+      const lat = parseFloat(latInput.value);
+      const lng = parseFloat(lngInput.value);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        distEl.textContent = haversine(customerLat, customerLng, lat, lng).toFixed(3) + ' km';
+        mapsLink.href = directionsUrl(lat, lng);
+        mapsLink.classList.remove('disabled');
+      } else {
+        distEl.textContent = '—';
+        mapsLink.href = '#';
+        mapsLink.classList.add('disabled');
+      }
+      refreshNttnMap();
+    }
+
+    providerSel.addEventListener('change', () => {
+      toggleOther(providerSel, otherWrap, otherInput);
+      refreshNttnMap();
+    });
+    toggleOther(providerSel, otherWrap, otherInput);
+    latInput.addEventListener('input', updateDistance);
+    lngInput.addEventListener('input', updateDistance);
+    updateDistance();
+
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        const rows = document.querySelectorAll('.nttn-review-row');
+        if (rows.length > 1) {
+          row.remove();
+          document.querySelectorAll('.nttn-review-row').forEach((r, i) => reindexRow(r, i));
+          rowIndex = document.querySelectorAll('.nttn-review-row').length;
+          refreshNttnMap();
+        }
+      });
+    }
+  }
+
+  document.querySelectorAll('.nttn-review-row').forEach(bindRow);
+
+  document.getElementById('add-nttn-row').addEventListener('click', () => {
+    const container = document.getElementById('nttn-rows');
+    const first = container.querySelector('.nttn-review-row');
+    const clone = first.cloneNode(true);
+    clone.querySelectorAll('input[name*="_id"]').forEach(el => el.remove());
+    clone.querySelectorAll('input[type="text"], input[type="number"]').forEach(el => { el.value = ''; });
+    clone.querySelector('.nttn-provider-select').selectedIndex = 0;
+    clone.querySelector('.nttn-distance').textContent = '—';
+    const mapsLink = clone.querySelector('.nttn-maps-link');
+    mapsLink.href = '#';
+    mapsLink.classList.add('disabled');
+    container.appendChild(clone);
+    reindexRow(clone, rowIndex);
+    bindRow(clone);
+    rowIndex++;
+    refreshNttnMap();
+  });
+
+  const prefSel = document.getElementById('id_preferred_nttn_provider');
+  const prefOtherWrap = document.getElementById('preferred-other-wrap');
+  const prefOther = document.getElementById('id_preferred_nttn_other');
+  if (prefSel) {
+    Array.from(prefSel.options).forEach(opt => {
+      const p = providers.find(x => String(x.id) === opt.value);
+      if (p) opt.dataset.code = p.code;
+    });
+    prefSel.addEventListener('change', () => toggleOther(prefSel, prefOtherWrap, prefOther));
+    toggleOther(prefSel, prefOtherWrap, prefOther);
+  }
+
+  refreshNttnMap();
+})();
+</script>
 {% endblock %}

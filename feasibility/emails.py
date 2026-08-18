@@ -45,3 +45,83 @@ def send_work_order_status_email(fr, old_status, new_status):
         [settings.SALES_TEAM_EMAIL, settings.NOC_TEAM_EMAIL],
         fail_silently=True,
     )
+
+
+def send_work_order_notification(fr, user=None):
+    """Email the full work order report to Accounts on create/submit."""
+    from django.utils import timezone
+    context = {
+        **_ctx(fr),
+        'submitted_by': user or fr.onboarded_by,
+        'submitted_at': fr.wo_submitted_at or timezone.now(),
+    }
+    send_mail(
+        f'[Kloud Accounts] Work Order {fr.work_order_label} — {fr.display_name}',
+        render_to_string('feasibility/email_workorder_accounts.txt', context),
+        settings.DEFAULT_FROM_EMAIL,
+        [settings.ACCOUNTS_EMAIL],
+        fail_silently=True,
+    )
+    fr.wo_email_sent = True
+    fr.save(update_fields=['wo_email_sent'])
+
+
+def send_wo_stage_email(fr, stage, action, remarks, actor):
+    """Email the relevant inbox for a work-order stage action."""
+    from django.utils import timezone
+    context = {
+        **_ctx(fr),
+        'stage': stage,
+        'action': action,
+        'remarks': remarks,
+        'actor': actor,
+        'acted_at': timezone.now(),
+    }
+    body = render_to_string('feasibility/email_workorder_stage.txt', context)
+    subject = f'[Kloud] {fr.work_order_label} — {stage.title()} {action.replace("_", " ").title()}'
+
+    recipients = []
+    if action == 'approve' and stage == 'accounts':
+        recipients = [settings.MANAGEMENT_EMAIL]
+    elif action == 'approve' and stage == 'management':
+        recipients = [settings.NOC_TEAM_EMAIL]
+    elif action == 'submit_config':
+        recipients = [getattr(settings, 'TECHNICAL_TEAM_EMAIL', settings.NOC_TEAM_EMAIL)]
+    elif action == 'approve' and stage == 'technical':
+        recipients = [settings.SALES_TEAM_EMAIL, settings.NOC_TEAM_EMAIL]
+        if fr.onboarded_by and fr.onboarded_by.email:
+            recipients.insert(0, fr.onboarded_by.email)
+    elif action in ('reject', 'request_correction'):
+        recipients = [settings.SALES_TEAM_EMAIL]
+        if fr.onboarded_by and fr.onboarded_by.email:
+            recipients.insert(0, fr.onboarded_by.email)
+    elif action == 'resubmit':
+        if fr.onboarding_status in ('submitted', 'pending_approval'):
+            recipients = [settings.ACCOUNTS_EMAIL]
+        elif fr.onboarding_status == 'accounts_approved':
+            recipients = [settings.MANAGEMENT_EMAIL]
+        else:
+            recipients = [settings.NOC_TEAM_EMAIL]
+    if not recipients:
+        return
+    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, list(dict.fromkeys(recipients)), fail_silently=True)
+
+
+def send_frq_review_notification(feasibility, reviewer):
+    """Notify the submitting Sales user (and team inbox) that FRQ review is complete."""
+    from django.utils import timezone
+    nttn_entries = list(feasibility.nttn_review_entries.select_related('provider'))
+    context = {
+        'f': feasibility,
+        'reviewer': reviewer,
+        'reviewed_at': feasibility.review_submitted_at or timezone.now(),
+        'nttn_entries': nttn_entries,
+    }
+    body = render_to_string('feasibility/email_frq_review.txt', context)
+    subject = f'[Kloud] FRQ Review: {feasibility.frq_label} — {feasibility.get_status_display()}'
+    recipients = [settings.SALES_TEAM_EMAIL]
+    if feasibility.submitted_by and feasibility.submitted_by.email:
+        recipients.insert(0, feasibility.submitted_by.email)
+    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, recipients, fail_silently=True)
+    feasibility.review_email_sent = True
+    feasibility.save(update_fields=['review_email_sent'])

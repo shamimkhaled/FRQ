@@ -1,0 +1,53 @@
+{% load static %}
+[Kloud ISP — FRQ Review Report]
+==================================
+
+FRQ ID            : {{ f.frq_label }}
+Review Status     : {{ f.get_status_display }}
+Reviewed By       : {{ reviewer.get_full_name|default:reviewer.username }}
+Review Date       : {{ reviewed_at|date:"d M Y, H:i" }}
+
+--- CLIENT SUMMARY ---
+Contact Person    : {{ f.display_name }}
+Email             : {{ f.email|default:"—" }}
+Customer Type     : {{ f.get_customer_type_display }}
+Phone             : {{ f.phone_number }}
+Company           : {{ f.company_name|default:"—" }}
+Capacity          : {{ f.requested_capacity }} Mbps
+Preferred NTTN    : {{ f.preferred_nttn_label }}
+Address           : {{ f.address }}
+{% if f.division %}Division          : {{ f.division.name }}
+District          : {{ f.district.name }}
+Upazila           : {{ f.upazila.name }}
+{% endif %}
+Customer Location : {{ f.latitude }}, {{ f.longitude }}
+Maps Link         : {{ f.customer_maps_url }}
+Remarks           : {{ f.remarks|default:"—" }}
+Submitted By      : {{ f.submitted_by.get_full_name|default:f.submitted_by.username }}
+Submitted On      : {{ f.created_at|date:"d M Y, H:i" }}
+
+--- NTTN REVIEW ---
+{% for entry in nttn_entries %}Provider          : {{ entry.provider_label }}
+Coordinates       : {{ entry.pop_latitude|default:"—" }}, {{ entry.pop_longitude|default:"—" }}
+Maps / Directions : {{ entry.maps_url|default:"—" }}
+Distance (km)     : {{ entry.straight_distance_km|default:"—" }}
+Notes             : {{ entry.notes|default:"—" }}
+---
+{% empty %}No NTTN review entries recorded.
+{% endfor %}
+
+--- ENGINEERING REVIEW ---
+Status            : {{ f.get_status_display }}
+Fiber Route (km)  : {{ f.fiber_route_distance_km|default:"—" }}
+Est. Fiber Cost   : {% if f.estimated_fiber_cost %}BDT {{ f.estimated_fiber_cost }}{% else %}—{% endif %}
+Est. Delivery     : {% if f.estimated_delivery_days %}{{ f.estimated_delivery_days }} working days{% else %}—{% endif %}
+Engineering Notes : {{ f.engineering_notes|default:"—" }}
+Client Remarks    : {{ f.remarks|default:"—" }}
+
+{% if f.status == "feasible" or f.status == "feasible_additional_cost" %}
+RESULT: FEASIBLE — Sales & Marketing may proceed to create a Work Order.
+{% elif f.status == "not_feasible" %}
+RESULT: NOT FEASIBLE — See review feedback above.
+{% endif %}
+
+Print/PDF: Open the FRQ review page in your browser and use Print → Save as PDF.

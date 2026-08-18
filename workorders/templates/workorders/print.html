@@ -23,6 +23,7 @@
     </div>
     <div class="text-end">
       <div class="fs-4 fw-bold">{{ fr.work_order_label }}</div>
+      <div class="small">{{ fr.frq_label }}</div>
       <div>{{ fr.created_at|date:"d M Y" }}</div>
     </div>
   </div>
@@ -30,61 +31,68 @@
   <div class="row mb-3">
     <div class="col-6">
       <h6 class="text-uppercase text-muted">Customer</h6>
-      <p class="mb-1"><strong>{{ fr.customer_name }}</strong></p>
+      <p class="mb-1"><strong>{{ fr.display_name }}</strong></p>
       <p class="mb-1">{{ fr.company_name }}</p>
       <p class="mb-1">{{ fr.address }}</p>
       <p class="mb-0">Phone: {{ fr.phone_number }} | NID: {{ fr.nid_number }}</p>
     </div>
     <div class="col-6 text-end">
       <h6 class="text-uppercase text-muted">Service Details</h6>
-      <p class="mb-1">NTTN: {{ fr.get_preferred_nttn_display }}</p>
+      <p class="mb-1">Customer Category: {{ fr.get_customer_category_display|default:"—" }}</p>
+      <p class="mb-1">SFP Wavelength: {{ fr.get_sfp_wavelength_display|default:"—" }}</p>
+      <p class="mb-1">Upstream: {{ fr.upstream_provider_label }}</p>
+      <p class="mb-1">NTTN: {{ fr.preferred_nttn_label }}</p>
       <p class="mb-1">Capacity: {{ fr.requested_capacity }} Mbps</p>
+      <p class="mb-1">Billing Date: {{ fr.billing_date|date:"d M Y"|default:"—" }}</p>
       <p class="mb-1">Status: {{ fr.get_onboarding_status_display }}</p>
-      {% if fr.expected_installation_date %}<p class="mb-0">Install Date: {{ fr.expected_installation_date|date:"d M Y" }}</p>{% endif %}
+      <p class="mb-1">VLAN / SCR / Link: {{ fr.vlan_id|default:"—" }} / {{ fr.scr|default:"—" }} / {{ fr.link_id|default:"—" }}</p>
+      <p class="mb-1">Activation Date: {{ fr.activation_date|date:"d M Y"|default:"—" }}</p>
     </div>
   </div>
 
   <table class="table table-bordered table-sm">
-    <thead class="table-light"><tr><th>Service</th><th>Mbps</th><th>Unit Price</th><th>Qty</th><th class="text-end">Monthly</th></tr></thead>
+    <thead class="table-light">
+      <tr>
+        {% if fr.customer_category != 'DC' %}<th>Service</th>{% endif %}
+        <th>{% if fr.customer_category == 'DC' %}Capacity{% else %}Mbps{% endif %}</th>
+        <th>Price</th>
+        {% if fr.customer_category != 'DC' %}<th>Qty</th>{% endif %}
+        <th class="text-end">Monthly</th>
+      </tr>
+    </thead>
     <tbody>
       {% for s in services %}
       <tr>
-        <td>{{ s.service_type }}</td>
+        {% if fr.customer_category != 'DC' %}<td>{{ s.get_service_type_display }}</td>{% endif %}
         <td>{{ s.capacity_mbps }}</td>
         <td>{{ s.unit_price|floatformat:2 }}</td>
-        <td>{{ s.quantity }}</td>
+        {% if fr.customer_category != 'DC' %}<td>{{ s.quantity }}</td>{% endif %}
         <td class="text-end">{{ s.total_monthly_charge|floatformat:2 }}</td>
       </tr>
       {% endfor %}
     </tbody>
     {% if summary %}
     <tfoot>
-      <tr><th colspan="4" class="text-end">Total Mbps</th><th class="text-end">{{ summary.total_mbps }}</th></tr>
-      <tr><th colspan="4" class="text-end">Subtotal</th><th class="text-end">{{ summary.subtotal_monthly|floatformat:2 }}</th></tr>
-      <tr><th colspan="4" class="text-end">VAT</th><th class="text-end">{{ summary.vat_total|floatformat:2 }}</th></tr>
-      <tr><th colspan="4" class="text-end">Discount</th><th class="text-end">{{ summary.discount_total|floatformat:2 }}</th></tr>
-      <tr><th colspan="4" class="text-end">Grand Total (BDT)</th><th class="text-end">{{ summary.grand_total|floatformat:2 }}</th></tr>
+      <tr><th colspan="5" class="text-end">Total Mbps</th><th class="text-end">{{ summary.total_mbps }}</th></tr>
+      <tr><th colspan="5" class="text-end">Subtotal</th><th class="text-end">{{ summary.subtotal_monthly|floatformat:2 }}</th></tr>
+      <tr><th colspan="5" class="text-end">VAT</th><th class="text-end">{{ summary.vat_total|floatformat:2 }}</th></tr>
+      <tr><th colspan="5" class="text-end">Discount</th><th class="text-end">{{ summary.discount_total|floatformat:2 }}</th></tr>
+      {% if fr.customer_category == 'MAC' %}
+      <tr><th colspan="5" class="text-end">Client Share ({{ fr.wo_client_share_percent }}%)</th><th class="text-end">{{ summary.mac_client_share|floatformat:2 }}</th></tr>
+      <tr><th colspan="5" class="text-end">Kloud Share ({{ fr.wo_kloud_share_percent }}%)</th><th class="text-end">{{ summary.mac_kloud_share|floatformat:2 }}</th></tr>
+      {% endif %}
+      <tr><th colspan="5" class="text-end">Grand Total (BDT)</th><th class="text-end">{{ summary.grand_total|floatformat:2 }}</th></tr>
     </tfoot>
     {% endif %}
   </table>
 
-  {% if confirmations %}
-  <h6 class="mt-4 text-uppercase text-muted">Bandwidth Confirmations</h6>
-  <table class="table table-bordered table-sm">
-    <thead class="table-light"><tr><th>Provider</th><th>Requested</th><th>Approved</th><th>Available</th><th>Status</th><th>Ref</th></tr></thead>
-    <tbody>
-      {% for c in confirmations %}
-      <tr>
-        <td>{{ c.provider }}</td>
-        <td>{{ c.requested_capacity }}</td>
-        <td>{{ c.approved_capacity|default:"—" }}</td>
-        <td>{{ c.available_capacity|default:"—" }}</td>
-        <td>{{ c.status }}</td>
-        <td>{{ c.provider_reference|default:"—" }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  {% if fr.documents.exists %}
+  <h6 class="mt-4 text-uppercase text-muted">Attachments</h6>
+  <ul class="mb-3">
+    {% for doc in fr.documents.all %}
+    <li>{{ doc.get_doc_type_display }} — {{ doc.file.name|cut:"onboarding_docs/" }}</li>
+    {% endfor %}
+  </ul>
   {% endif %}
 
   {% if fr.installation_notes %}

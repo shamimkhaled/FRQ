@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.db.models import Q, Sum, Count
 from django.db.models.functions import Coalesce
 
-from feasibility.models import FeasibilityRequest, ONBOARDING_STATUS, BANDWIDTH_STATUS
+from feasibility.models import FeasibilityRequest, ONBOARDING_STATUS, BANDWIDTH_STATUS, UpstreamProvider, DEFAULT_UPSTREAM_PROVIDERS
 
 
 SORT_FIELDS = {
@@ -15,6 +15,14 @@ SORT_FIELDS = {
     'status': 'onboarding_status',
     'created': 'created_at',
 }
+
+
+def seed_default_upstream_providers():
+    for code, name, order in DEFAULT_UPSTREAM_PROVIDERS:
+        UpstreamProvider.objects.get_or_create(
+            code=code,
+            defaults={'name': name, 'sort_order': order, 'is_active': True},
+        )
 
 
 def work_order_queryset():
@@ -34,7 +42,8 @@ def filter_work_orders(qs, request):
         qs = qs.filter(
             Q(customer_name__icontains=search) | Q(company_name__icontains=search) |
             Q(phone_number__icontains=search) | Q(address__icontains=search) |
-            Q(email__icontains=search)
+            Q(email__icontains=search) | Q(wo_number__icontains=search) |
+            Q(frq_number__icontains=search) | Q(contact_person__icontains=search)
         )
     if status:
         qs = qs.filter(onboarding_status=status)
@@ -48,8 +57,8 @@ def filter_work_orders(qs, request):
     return qs, search, status, bw_status
 
 
-def dashboard_stats():
-    wo_qs = FeasibilityRequest.objects.exclude(onboarding_status='')
+def dashboard_stats(qs=None):
+    wo_qs = qs if qs is not None else FeasibilityRequest.objects.exclude(onboarding_status='')
     pending_bw = 0
     confirmed_bw = 0
     total_revenue = Decimal('0')
@@ -66,7 +75,10 @@ def dashboard_stats():
             total_mbps += summary['total_mbps']
     return {
         'total_wo': wo_qs.count(),
-        'pending_wo': wo_qs.filter(onboarding_status__in=('draft', 'submitted', 'pending_approval')).count(),
+        'pending_wo': wo_qs.filter(onboarding_status__in=(
+            'draft', 'submitted', 'pending_approval', 'accounts_approved',
+            'management_approved', 'tech_submitted', 'correction_requested',
+        )).count(),
         'approved_wo': wo_qs.filter(onboarding_status='approved').count(),
         'pending_bandwidth': pending_bw,
         'confirmed_bandwidth': confirmed_bw,
@@ -80,13 +92,15 @@ def export_work_orders_csv(queryset):
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow([
-        'Work Order ID', 'Customer', 'Company', 'Phone', 'Address', 'NTTN',
-        'Capacity Mbps', 'Status', 'Bandwidth Status', 'Created',
+        'Work Order ID', 'FRQ ID', 'Customer', 'Company', 'Phone', 'Address', 'Upstream',
+        'Category', 'SFP Wavelength', 'Capacity Mbps', 'Status', 'Bandwidth Status', 'Created',
     ])
     for fr in queryset:
         writer.writerow([
-            fr.work_order_label, fr.customer_name, fr.company_name, fr.phone_number,
-            fr.address, fr.get_preferred_nttn_display(), fr.requested_capacity,
+            fr.work_order_label, fr.frq_label, fr.display_name, fr.company_name, fr.phone_number,
+            fr.address, fr.upstream_provider_label or fr.preferred_nttn_label,
+            fr.get_customer_category_display(), fr.get_sfp_wavelength_display(),
+            fr.requested_capacity,
             fr.get_onboarding_status_display(), fr.bandwidth_status_label,
             fr.created_at.strftime('%Y-%m-%d'),
         ])

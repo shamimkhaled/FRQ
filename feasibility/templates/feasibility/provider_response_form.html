@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% block title %}{{ provider.name }} Response | #{{ fr.pk }}{% endblock %}
+{% block page_title %}{{ provider.name }} — NTTN Feasibility Response{% endblock %}
+
+{% block content %}
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <a href="{% url 'feasibility:provider_comparison' fr.pk %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Comparison</a>
+  <a href="{% url 'feasibility:review' fr.pk %}" class="btn btn-outline-warning btn-sm"><i class="fas fa-clipboard-check me-1"></i>Review</a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-4">
+    <div class="card border-start border-4" style="border-color: {{ provider.color }} !important;">
+      <div class="card-body">
+        <h6 class="fw-bold mb-2">{{ provider.name }}</h6>
+        <div class="small text-muted">Kloud feasibility baseline</div>
+        <div class="mt-2">
+          <div>Air: <strong>{{ fr.air_distance_km|default:"—" }} km</strong></div>
+          <div>Route: <strong>{{ fr.fiber_route_distance_km|default:"—" }} km</strong></div>
+          <div>Est. cost: <strong>{% if fr.estimated_fiber_cost %}BDT {{ fr.estimated_fiber_cost|floatformat:0 }}{% else %}—{% endif %}</strong></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-8">
+    <div class="alert alert-info py-2 mb-0 small">
+      <i class="fas fa-info-circle me-1"></i>
+      Enter the provider's POP coordinates and distances. Straight-line distance is auto-calculated from POP to customer when coordinates are saved.
+    </div>
+  </div>
+</div>
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ formset.management_form }}
+
+  <div class="card mb-3">
+    <div class="card-header fw-semibold">Response Status</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Status</label>
+          {{ form.status }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Response Date</label>
+          {{ form.response_date }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Provider Reference</label>
+          {{ form.provider_reference }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header fw-semibold"><i class="fas fa-map-marker-alt me-2 text-danger"></i>Distance & POP</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">POP Name</label>
+          {{ form.pop_name }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">POP Address</label>
+          {{ form.pop_address }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">POP Latitude</label>
+          {{ form.pop_latitude }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">POP Longitude</label>
+          {{ form.pop_longitude }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Straight-Line Distance (km)</label>
+          {{ form.straight_line_distance_km }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Fiber Route Distance (km)</label>
+          {{ form.fiber_route_distance_km }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Deployment Time</label>
+          {{ form.estimated_deployment_time }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Available Capacity (Mbps)</label>
+          {{ form.available_capacity }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Max Capacity (Mbps)</label>
+          {{ form.max_supported_capacity }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header fw-semibold"><i class="fas fa-money-bill me-2 text-success"></i>Commercial</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Fiber Deployment Cost</label>
+          {{ form.fiber_deployment_cost }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Installation Cost</label>
+          {{ form.installation_cost }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Monthly Bandwidth Cost</label>
+          {{ form.monthly_bandwidth_cost }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Additional Charges</label>
+          {{ form.additional_charges }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Total Estimated Cost</label>
+          {{ form.total_estimated_cost }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header fw-semibold"><i class="fas fa-hard-hat me-2 text-warning"></i>Engineering Feedback</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Route Condition</label>
+          {{ form.route_condition }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Existing Fiber</label>
+          {{ form.existing_fiber }}
+        </div>
+        <div class="col-md-4 d-flex align-items-end gap-3 flex-wrap">
+          <div class="form-check">
+            {{ form.civil_work_required }}
+            <label class="form-check-label">Civil Work</label>
+          </div>
+          <div class="form-check">
+            {{ form.pole_required }}
+            <label class="form-check-label">Pole Required</label>
+          </div>
+          <div class="form-check">
+            {{ form.underground_fiber_required }}
+            <label class="form-check-label">Underground</label>
+          </div>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Engineering Remarks</label>
+          {{ form.engineering_remarks }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Additional Equipment</label>
+          {{ form.additional_equipment }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Risk Assessment</label>
+          {{ form.risk_assessment }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Recommended Solution</label>
+          {{ form.recommended_solution }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header fw-semibold"><i class="fas fa-paperclip me-2"></i>Attachments</div>
+    <div class="card-body">
+      {% for f in formset %}
+      <div class="row g-2 mb-2 align-items-end border-bottom pb-2">
+        <div class="col-md-3">{{ f.attachment_type }}</div>
+        <div class="col-md-4">{{ f.file }}</div>
+        <div class="col-md-4">{{ f.description }}</div>
+        <div class="col-md-1">{% if f.instance.pk %}{{ f.DELETE }} <label class="small">Del</label>{% endif %}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 justify-content-end flex-wrap">
+    <a href="{% url 'feasibility:provider_comparison' fr.pk %}" class="btn btn-outline-secondary">Cancel</a>
+    <button type="submit" name="action" value="save" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save Response</button>
+    <button type="submit" name="action" value="recommend" class="btn btn-success"><i class="fas fa-trophy me-1"></i>Save & Recommend</button>
+  </div>
+</form>
+{% endblock %}

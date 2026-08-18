@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Provider Comparison Report | #{{ fr.pk }}{% endblock %}
+{% block page_title %}NTTN Provider Comparison Report{% endblock %}
+
+{% block content %}
+<div class="no-print mb-3 d-flex gap-2">
+  <a href="{% url 'feasibility:provider_comparison' fr.pk %}" class="btn btn-outline-secondary btn-sm">Back</a>
+  <button onclick="window.print()" class="btn btn-primary btn-sm"><i class="fas fa-print me-1"></i>Print</button>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <h4 class="text-primary fw-bold mb-1">Kloud ISP — NTTN Provider Comparison</h4>
+    <div class="text-muted small">Request #{{ fr.pk }} · {{ fr.customer_name }} · {{ fr.requested_capacity }} Mbps</div>
+    <div class="small mt-2">{{ fr.address }}</div>
+    {% if recommended %}
+    <div class="alert alert-success mt-3 py-2 mb-0">
+      <strong>Recommended Provider:</strong> {{ recommended.provider.name }}
+      {% if recommended.recommendation_reasons %} — {{ recommended.recommendation_reasons|join:"; " }}{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header fw-semibold">Kloud Feasibility Baseline</div>
+  <div class="card-body">
+    <div class="row small">
+      <div class="col-md-3">Nearest POP: <strong>{{ fr.nearest_pop.name|default:"—" }}</strong></div>
+      <div class="col-md-3">Air Distance: <strong>{{ fr.air_distance_km|default:"—" }} km</strong></div>
+      <div class="col-md-3">Fiber Route: <strong>{{ fr.fiber_route_distance_km|default:"—" }} km</strong></div>
+      <div class="col-md-3">Est. Cost: <strong>{% if fr.estimated_fiber_cost %}BDT {{ fr.estimated_fiber_cost|floatformat:0 }}{% else %}—{% endif %}</strong></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header fw-semibold">Provider Responses</div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Provider</th><th>Status</th><th>POP</th><th>Straight</th><th>Route</th><th>vs Kloud</th><th>Capacity</th><th>Cost</th><th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in comparison_rows %}
+        {% if not row.is_kloud %}
+        <tr class="{% if row.is_recommended %}table-success{% endif %}">
+          <td>{{ row.provider_name }}{% if row.is_recommended %} ★{% endif %}</td>
+          <td>{{ row.status_display }}</td>
+          <td>{{ row.pop_name }}</td>
+          <td>{{ row.straight_distance_km|default:"—" }}</td>
+          <td>{{ row.fiber_route_distance_km|default:"—" }}</td>
+          <td>{% if row.vs_kloud_route_km != None %}{% if row.vs_kloud_route_km > 0 %}+{% endif %}{{ row.vs_kloud_route_km }}{% else %}—{% endif %}</td>
+          <td>{{ row.available_capacity|default:"—" }}</td>
+          <td>{% if row.deployment_cost %}BDT {{ row.deployment_cost|floatformat:0 }}{% else %}—{% endif %}</td>
+          <td class="small">{{ row.engineering_remarks|truncatechars:100|default:"—" }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
