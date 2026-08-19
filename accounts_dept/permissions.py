@@ -190,6 +190,7 @@ def user_owns_records_only(user):
 
 def filter_frq_queryset(user, qs):
     """Sales isolation: restrict queryset to user's own submissions."""
+    qs = qs.all()
     if user.is_superuser:
         return qs
     if user_owns_records_only(user):

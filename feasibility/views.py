@@ -119,7 +119,7 @@ def dashboard(request):
         'pending_providers': (
             NTTNProviderResponse.objects.filter(
                 status='pending',
-                feasibility_request__in=filter_frq_queryset(request.user, FeasibilityRequest.objects),
+                feasibility_request__in=filter_frq_queryset(request.user, FeasibilityRequest.objects.all()),
             ).count() if user_has_perm(request.user, 'feasibility.nttn') else 0
         ),
     }
